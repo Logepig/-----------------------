@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <!-- Day icon: Yellow sun (top-left), Gray moon (bottom-right), with white padding -->
+  <rect x="0" y="0" width="32" height="32" fill="#FFFFFF"/>
+
+  <!-- Yellow sun top-left -->
+  <g>
+    <circle cx="9" cy="9" r="6" fill="#F6C90E"/>
+    <g stroke="#F6C90E" stroke-width="1.4" stroke-linecap="round">
+      <line x1="9" y1="1.8" x2="9" y2="-0.8"/>
+      <line x1="9" y1="19.8" x2="9" y2="21.8"/>
+      <line x1="1.8" y1="9" x2="-0.8" y2="9"/>
+      <line x1="19.8" y1="9" x2="21.8" y2="9"/>
+      <line x1="4.8" y1="4.8" x2="3.1" y2="3.1"/>
+      <line x1="13.2" y1="4.8" x2="14.9" y2="3.1"/>
+      <line x1="4.8" y1="13.2" x2="3.1" y2="14.9"/>
+      <line x1="13.2" y1="13.2" x2="14.9" y2="14.9"/>
+    </g>
+  </g>
+
+  <!-- Gray crescent moon bottom-right -->
+  <g>
+    <defs>
+      <mask id="mask-crescent-gray-br">
+        <rect x="0" y="0" width="32" height="32" fill="white" />
+        <circle cx="23" cy="23" r="6" fill="black" />
+        <circle cx="25.8" cy="22" r="6" fill="white" />
+      </mask>
+    </defs>
+    <circle cx="23" cy="23" r="6" fill="#9CA3AF" mask="url(#mask-crescent-gray-br)"/>
+  </g>
+</svg>
+
+

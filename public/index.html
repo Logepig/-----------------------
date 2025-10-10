@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Главная</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.cdnfonts.com/css/als-schlange-sans" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body data-page="index">
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="/">Главная</a>
+      <a href="/MyProjects">Мои проекты</a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-toggle" type="button" aria-label="Сменить тему"></button>
+      <a href="/Profile" class="profile-link hidden" id="profile-link">Профиль</a>
+      <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <h1>Добро пожаловать</h1>
+    <section class="projects">
+      <h2>Проекты</h2>
+      <div class="projects-list" id="projects-list" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <!-- Add Project FAB and Modal -->
+  <button class="fab-add" id="fab-add" aria-label="Добавить проект">+</button>
+  <div class="modal" id="add-project-modal" hidden>
+    <div class="modal-dialog">
+      <button class="modal-close" type="button" aria-label="Закрыть">×</button>
+      <h3>Новый проект</h3>
+      <form id="add-project-form">
+        <label>Имя проекта
+          <input name="name" required placeholder="Введите имя проекта" />
+        </label>
+        <label>Модель
+          <select name="model" required>
+            <option value="">Выберите модель</option>
+            <option value="каскадная">Каскадная</option>
+            <option value="code & fix">Code & Fix</option>
+            <option value="v-образная">V-образная</option>
+            <option value="спиральная">Спиральная</option>
+            <option value="agile">Agile</option>
+            <option value="skrum">Skrum</option>
+            <option value="waterfall">Waterfall</option>
+            <option value="iterative">Iterative</option>
+            <option value="пользовательская">Пользовательская</option>
+          </select>
+        </label>
+        <label>Тема
+          <input name="topic" placeholder="Введите тему проекта" />
+        </label>
+        <label>Тип проекта
+          <select name="projectType" required>
+            <option value="">Выберите тип</option>
+            <option value="веб-приложение">Веб-приложение</option>
+            <option value="сайт">Сайт</option>
+            <option value="мобильное приложение">Мобильное приложение</option>
+            <option value="консольное приложение">Консольное приложение</option>
+            <option value="игра">Игра</option>
+            <option value="приложение">Приложение</option>
+            <option value="пользовательский">Пользовательский</option>
+          </select>
+        </label>
+        <fieldset class="avatar-picker">
+          <legend>Аватар проекта</legend>
+          <div class="avatar-grid">
+            <label class="avatar-option">
+              <input type="radio" name="avatarUrl" value="/img/icon_avatar_1.svg" checked>
+              <img src="/img/icon_avatar_1.svg" alt="Аватар 1">
+            </label>
+            <label class="avatar-option">
+              <input type="radio" name="avatarUrl" value="/img/icon_avatar_2.svg">
+              <img src="/img/icon_avatar_2.svg" alt="Аватар 2">
+            </label>
+            <label class="avatar-option">
+              <input type="radio" name="avatarUrl" value="/img/icon_avatar_3.svg">
+              <img src="/img/icon_avatar_3.svg" alt="Аватар 3">
+            </label>
+            <label class="avatar-option">
+              <input type="radio" name="avatarUrl" value="/img/icon_avatar_4.svg">
+              <img src="/img/icon_avatar_4.svg" alt="Аватар 4">
+            </label>
+            <label class="avatar-option">
+              <input type="radio" name="avatarUrl" value="/img/icon_avatar_5.svg">
+              <img src="/img/icon_avatar_5.svg" alt="Аватар 5">
+            </label>
+            <label class="avatar-option">
+              <input type="radio" name="avatarUrl" value="/img/icon_avatar_6.svg">
+              <img src="/img/icon_avatar_6.svg" alt="Аватар 6">
+            </label>
+          </div>
+        </fieldset>
+        <button type="submit">Создать</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="auth-modal" hidden>
+    <div class="modal-dialog">
+      <button class="modal-close" type="button" aria-label="Закрыть">×</button>
+      <div class="tabs">
+        <button class="tab-button active" data-tab="login">Вход</button>
+        <button class="tab-button" data-tab="register">Регистрация</button>
+      </div>
+      <div class="tab-content" data-tab="login">
+        <form id="login-form">
+          <label>Имя пользователя<input name="username" required></label>
+          <label>Пароль<input type="password" name="password" required></label>
+          <button type="submit">Войти</button>
+        </form>
+      </div>
+      <div class="tab-content" data-tab="register" hidden>
+        <form id="register-form">
+          <label>Имя пользователя<input name="username" required></label>
+          <label>Пароль<input type="password" name="password" required></label>
+          <label>Номер телефона<input name="phone" required></label>
+          <label>Почта<input type="email" name="email" required></label>
+          <button type="submit">Зарегистрироваться</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/main.js" defer></script>
+</body>
+</html>
+
+

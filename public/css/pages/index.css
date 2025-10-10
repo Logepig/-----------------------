@@ -1,0 +1,65 @@
+/* Project list - Index page */
+.projects-list .project-row { display: grid; grid-template-columns: 1fr max-content max-content; align-items: center; gap: 15px; padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.projects-list .flex-block-projects { display: inline-flex; align-items: center; gap: 15px; min-width: 0; }
+.projects-list .project-avatar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); flex: 0 0 auto; }
+.projects-list .project-name { font-weight: 600; align-self: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.projects-list .project-participants { justify-self: end; text-align: right; white-space: nowrap; }
+.projects-list .project-action { justify-self: end; white-space: nowrap; }
+body[data-page="index"] h1 { color: var(--primary); }
+body[data-page="index"] .projects { margin-top: 16px; }
+body[data-page="index"] .projects h2 { margin: 0 0 8px 0; font-size: 18px; color: var(--fg); text-align: center; }
+body[data-page="index"] .projects-list {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  height: calc(100vh - var(--navbar-size) - 120px);
+  /* 120px roughly accounts for h1, h2, margins and container padding */
+  overflow: auto;
+  display: grid;
+  gap: 15px;
+  padding: 8px;
+  align-content: start; /* prevent rows from stretching to fill height */
+}
+body[data-page="index"] .project-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(120px, 160px) 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+}
+/* fixed height for all project rows */
+body[data-page="index"] .project-row { height: 50px; }
+body[data-page="index"] .project-name { text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+body[data-page="index"] .project-participants { text-align: center; color: var(--muted); }
+body[data-page="index"] .project-action { display: flex; justify-content: flex-end; }
+body[data-page="index"] .project-action .plus {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid #16a34a;
+  color: #16a34a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Floating Add button */
+body[data-page="index"] .fab-add {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.2);
+}
+

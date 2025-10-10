@@ -1,0 +1,36 @@
+/* Project list - MyProjects page */
+.projects-list .project-row { display: grid; grid-template-columns: 1fr max-content max-content; align-items: center; gap: 15px; padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.projects-list .flex-block-projects { display: inline-flex; align-items: center; gap: 15px; min-width: 0; }
+.projects-list .project-avatar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); flex: 0 0 auto; }
+.projects-list .project-name { font-weight: 600; align-self: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.projects-list .project-participants { justify-self: end; text-align: right; white-space: nowrap; }
+.projects-list .project-action { justify-self: end; white-space: nowrap; }
+body[data-page="myprojects"] h1 { color: var(--primary); }
+body[data-page="myprojects"] .projects { margin-top: 16px; }
+body[data-page="myprojects"] .projects h2 { margin: 0 0 8px 0; font-size: 18px; color: var(--fg); text-align: center; }
+body[data-page="myprojects"] .projects-list {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  height: calc(100vh - var(--navbar-size) - 120px);
+  overflow: auto;
+  display: grid;
+  gap: 15px;
+  padding: 8px;
+  align-content: start;
+}
+body[data-page="myprojects"] .project-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(120px, 160px) 160px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+}
+body[data-page="myprojects"] .project-row { height: 50px; }
+body[data-page="myprojects"] .project-name { text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+body[data-page="myprojects"] .project-participants { text-align: center; color: var(--muted); }
+body[data-page="myprojects"] .project-action { display: flex; justify-content: flex-end; color: var(--muted); }
+body[data-page="myprojects"] .project-action .role { border: 1px solid var(--border); padding: 4px 8px; border-radius: 8px; }
+

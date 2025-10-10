@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Проект</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.cdnfonts.com/css/als-schlange-sans" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/pages/project.css" />
+</head>
+<body data-page="project">
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="/">Главная</a>
+      <a href="/MyProjects">Мои проекты</a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-toggle" type="button" aria-label="Сменить тему"></button>
+      <a href="/Profile" class="profile-link hidden" id="profile-link">Профиль</a>
+      <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
+    </div>
+  </nav>
+
+  <main class="container project-layout">
+    <aside class="project-sidenav">
+      <nav class="project-nav" id="project-nav">
+        <a href="/Project.html" class="project-nav-link">Главная</a>
+        <a href="/ProjectTasks.html" class="project-nav-link">Задачи</a>
+        <a href="/ProjectFiles.html" class="project-nav-link">Файлы</a>
+        <a href="/ProjectStages.html" class="project-nav-link">Этапы</a>
+        <a href="/ProjectMembers.html" class="project-nav-link">Участники</a>
+        <a href="/ProjectSettings.html" class="project-nav-link only-manager" hidden>Настройки проекта</a>
+      </nav>
+    </aside>
+    <section class="project-content">
+      <div class="project-header" id="project-header"></div>
+      <div class="project-main">
+        <div class="project-info" id="project-details"></div>
+        <div class="project-model" hidden>
+          <h2>Модель</h2>
+          <div id="model-view" class="model-view" aria-label="Окно отображения модели" style="height:300px;border:1px dashed var(--border-color);border-radius:8px;display:flex;align-items:center;justify-content:center;opacity:.8;">
+            <span>Пока нет модели для отображения</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/main.js" defer></script>
+  <script src="/js/project.js" defer></script>
+</body>
+</html>
+
+

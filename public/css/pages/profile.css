@@ -1,0 +1,9 @@
+/* No changes required for now */
+body[data-page="profile"] h1 { color: var(--primary); }
+body[data-page="profile"] .profile-edit { margin-top: 16px; max-width: 520px; }
+body[data-page="profile"] .field { display: grid; gap: 6px; margin-bottom: 12px; }
+body[data-page="profile"] .field-label { color: var(--muted); font-size: 14px; }
+body[data-page="profile"] input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--fg); }
+body[data-page="profile"] .under-nav { display: flex; justify-content: flex-end; padding: 8px 16px; }
+body[data-page="profile"] #logout-btn { color: #ef4444; border: none; background: transparent; padding: 4px 8px; }
+

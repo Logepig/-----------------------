@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Этапы проекта</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.cdnfonts.com/css/als-schlange-sans" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/pages/project.css" />
+</head>
+<body data-page="project-stages">
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="/">Главная</a>
+      <a href="/MyProjects">Мои проекты</a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-toggle" type="button" aria-label="Сменить тему"></button>
+      <a href="/Profile" class="profile-link hidden" id="profile-link">Профиль</a>
+      <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
+    </div>
+  </nav>
+  <main class="container project-layout">
+    <aside class="project-sidenav">
+      <nav class="project-nav">
+        <a href="/Project.html" class="project-nav-link">Главная</a>
+        <a href="/ProjectTasks.html" class="project-nav-link">Задачи</a>
+        <a href="/ProjectFiles.html" class="project-nav-link">Файлы</a>
+        <a href="/ProjectStages.html" class="project-nav-link">Этапы</a>
+        <a href="/ProjectMembers.html" class="project-nav-link">Участники</a>
+        <a href="/ProjectSettings.html" class="project-nav-link only-manager" hidden>Настройки проекта</a>
+      </nav>
+    </aside>
+    <section class="project-content">
+      <h1>Этапы</h1>
+      <div id="stages-canvas" class="model-view" style="height:360px;border:1px solid var(--border); border-radius:8px;" hidden></div>
+      <div class="stages-controls" id="stages-controls" hidden>
+        <button class="circle-btn blue" id="add-stage-open" title="Добавить этап">+</button>
+        <button class="circle-btn blue" id="edit-stage-open" title="Изменить этап">~</button>
+        <button class="circle-btn blue" id="delete-stage-open" title="Удалить этап">-</button>
+      </div>
+
+      <!-- Modals -->
+      <div class="modal" id="add-stage-modal" hidden>
+        <div class="modal-dialog">
+          <button class="modal-close" type="button" aria-label="Закрыть">×</button>
+          <h3>Добавить этап</h3>
+          <form id="add-stage-form">
+            <label>Название этапа
+              <input name="name" required placeholder="Название" />
+            </label>
+            <button type="submit">Сохранить</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal" id="edit-stage-modal" hidden>
+        <div class="modal-dialog">
+          <button class="modal-close" type="button" aria-label="Закрыть">×</button>
+          <h3>Изменить этап</h3>
+          <form id="edit-stage-form">
+            <label>Этап
+              <select name="stageId" id="edit-stage-select" required></select>
+            </label>
+            <label>Новое название
+              <input name="newName" required placeholder="Новое название" />
+            </label>
+            <button type="submit">Сохранить</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal" id="delete-stage-modal" hidden>
+        <div class="modal-dialog">
+          <button class="modal-close" type="button" aria-label="Закрыть">×</button>
+          <h3>Удалить этап</h3>
+          <form id="delete-stage-form">
+            <label>Этап
+              <select name="stageId" id="delete-stage-select" required></select>
+            </label>
+            <button type="submit">Удалить</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="/js/main.js" defer></script>
+  <script src="/js/project.js" defer></script>
+  <script src="/js/project-stages.js" defer></script>
+</body>
+</html>
+
+
