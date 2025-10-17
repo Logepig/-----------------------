@@ -35,11 +35,13 @@
       if (!details?.ok || !details.project) return;
       const p = details.project;
       const model = String(p.model || '').toLowerCase();
-      const addEnabled = editable && canAddStages(model);
+      const isDiagram = ['каскадная','waterfall','v-образная','v-shaped','v shaped','vmodel','спиральная','spiral','iterative','итеративная','итерационная'].includes(model);
+      const canEdit = editable && isDiagram; // На диаграммных моделях можно только переименовывать
+      const canAddDelete = editable && !isDiagram; // На пользовательских можно добавлять и удалять
+      
       if (controls) {
-        const isDiagram = ['каскадная','waterfall','v-образная','v-shaped','v shaped','vmodel','спиральная','spiral','iterative','итеративная','итерационная'].includes(model);
-        const nonDiagram = !isDiagram;
-        controls.hidden = !(editable && (addEnabled || nonDiagram));
+        controls.hidden = !editable; // Показываем контролы если есть права
+        
         const addOpen = document.getElementById('add-stage-open');
         const editOpen = document.getElementById('edit-stage-open');
         const deleteOpen = document.getElementById('delete-stage-open');
@@ -60,9 +62,14 @@
         function fillEditOptions(){ if (!editSelect) return; editSelect.innerHTML = stages.map(s => `<option value="${s.id}">${s.name}</option>`).join(''); }
         function fillDeleteOptions(){ if (!deleteSelect) return; deleteSelect.innerHTML = stages.map(s => `<option value="${s.id}">${s.name}</option>`).join(''); }
 
+        // Скрываем/показываем кнопки в зависимости от типа модели
+        if (addOpen) addOpen.style.display = canAddDelete ? '' : 'none';
+        if (editOpen) editOpen.style.display = (canEdit || canAddDelete) ? '' : 'none';
+        if (deleteOpen) deleteOpen.style.display = canAddDelete ? '' : 'none';
+
         addOpen?.addEventListener('click', () => open(addModal));
-        if (nonDiagram) editOpen?.addEventListener('click', () => { fillEditOptions(); open(editModal); }); else editOpen?.remove();
-        if (nonDiagram) deleteOpen?.addEventListener('click', () => { fillDeleteOptions(); open(deleteModal); }); else deleteOpen?.remove();
+        editOpen?.addEventListener('click', () => { fillEditOptions(); open(editModal); });
+        deleteOpen?.addEventListener('click', () => { fillDeleteOptions(); open(deleteModal); });
         addClose?.addEventListener('click', () => close(addModal));
         editClose?.addEventListener('click', () => close(editModal));
         deleteClose?.addEventListener('click', () => close(deleteModal));

@@ -61,12 +61,21 @@ db.serialize(() => {
     }
   });
 
-  // Безопасная миграция для users.last_seen
+  // Безопасная миграция для users (last_seen, display_name, avatar_url)
   db.all("PRAGMA table_info(users)", (err, rows) => {
     if (!err && rows) {
       const hasLastSeen = rows.some(row => row.name === 'last_seen');
+      const hasDisplayName = rows.some(row => row.name === 'display_name');
+      const hasAvatarUrl = rows.some(row => row.name === 'avatar_url');
+      
       if (!hasLastSeen) {
         db.run('ALTER TABLE users ADD COLUMN last_seen TEXT');
+      }
+      if (!hasDisplayName) {
+        db.run('ALTER TABLE users ADD COLUMN display_name TEXT');
+      }
+      if (!hasAvatarUrl) {
+        db.run('ALTER TABLE users ADD COLUMN avatar_url TEXT');
       }
     }
   });
@@ -125,6 +134,51 @@ db.serialize(() => {
     position INTEGER NOT NULL,
     UNIQUE(project_id, name),
     FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`);
+
+  // Группы файлов проекта (темы)
+  db.run(`CREATE TABLE IF NOT EXISTS project_file_groups (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+
+  // Файлы в группах
+  db.run(`CREATE TABLE IF NOT EXISTS project_files (
+    id TEXT PRIMARY KEY,
+    group_id TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(group_id) REFERENCES project_file_groups(id) ON DELETE CASCADE
+  )`);
+
+  // Задачи проекта
+  db.run(`CREATE TABLE IF NOT EXISTS project_tasks (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+
+  // Файлы задач
+  db.run(`CREATE TABLE IF NOT EXISTS project_task_files (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(task_id) REFERENCES project_tasks(id) ON DELETE CASCADE
   )`);
 });
 

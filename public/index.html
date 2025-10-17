@@ -10,6 +10,11 @@
 </head>
 <body data-page="index">
   <nav class="navbar">
+    <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Меню">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <div class="nav-left">
       <a href="/">Главная</a>
       <a href="/MyProjects">Мои проекты</a>
@@ -18,6 +23,14 @@
       <button class="theme-toggle" type="button" aria-label="Сменить тему"></button>
       <a href="/Profile" class="profile-link hidden" id="profile-link">Профиль</a>
       <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
+    </div>
+    <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dropdown-content">
+        <a href="/">Главная</a>
+        <a href="/MyProjects">Мои проекты</a>
+        <a href="/Profile" class="profile-link-mobile hidden">Профиль</a>
+        <button class="auth-open-mobile" type="button">Войти/Регистрация</button>
+      </div>
     </div>
   </nav>
 
@@ -39,18 +52,14 @@
         <label>Имя проекта
           <input name="name" required placeholder="Введите имя проекта" />
         </label>
-        <label>Модель
-          <select name="model" required>
-            <option value="">Выберите модель</option>
-            <option value="каскадная">Каскадная</option>
-            <option value="code & fix">Code & Fix</option>
-            <option value="v-образная">V-образная</option>
-            <option value="спиральная">Спиральная</option>
-            <option value="agile">Agile</option>
-            <option value="skrum">Skrum</option>
-            <option value="waterfall">Waterfall</option>
-            <option value="iterative">Iterative</option>
-            <option value="пользовательская">Пользовательская</option>
+        <label>Модель разработки
+          <select name="model">
+            <option value="">Не выбрана</option>
+            <option value="Каскадная">Каскадная (Waterfall)</option>
+            <option value="V-образная">V-образная модель</option>
+            <option value="Спиральная">Спиральная</option>
+            <option value="Итеративная">Итеративная</option>
+            <option value="Другая">Другая</option>
           </select>
         </label>
         <label>Тема
@@ -68,62 +77,80 @@
             <option value="пользовательский">Пользовательский</option>
           </select>
         </label>
-        <fieldset class="avatar-picker">
-          <legend>Аватар проекта</legend>
-          <div class="avatar-grid">
-            <label class="avatar-option">
-              <input type="radio" name="avatarUrl" value="/img/icon_avatar_1.svg" checked>
+        <div class="form-group-avatar">
+          <label>Аватар проекта</label>
+          <div class="avatar-selector-modal" id="avatar-selector-modal">
+            <div class="avatar-option-modal selected" data-avatar="/img/icon_avatar_1.svg">
               <img src="/img/icon_avatar_1.svg" alt="Аватар 1">
-            </label>
-            <label class="avatar-option">
-              <input type="radio" name="avatarUrl" value="/img/icon_avatar_2.svg">
+            </div>
+            <div class="avatar-option-modal" data-avatar="/img/icon_avatar_2.svg">
               <img src="/img/icon_avatar_2.svg" alt="Аватар 2">
-            </label>
-            <label class="avatar-option">
-              <input type="radio" name="avatarUrl" value="/img/icon_avatar_3.svg">
+            </div>
+            <div class="avatar-option-modal" data-avatar="/img/icon_avatar_3.svg">
               <img src="/img/icon_avatar_3.svg" alt="Аватар 3">
-            </label>
-            <label class="avatar-option">
-              <input type="radio" name="avatarUrl" value="/img/icon_avatar_4.svg">
+            </div>
+            <div class="avatar-option-modal" data-avatar="/img/icon_avatar_4.svg">
               <img src="/img/icon_avatar_4.svg" alt="Аватар 4">
-            </label>
-            <label class="avatar-option">
-              <input type="radio" name="avatarUrl" value="/img/icon_avatar_5.svg">
+            </div>
+            <div class="avatar-option-modal" data-avatar="/img/icon_avatar_5.svg">
               <img src="/img/icon_avatar_5.svg" alt="Аватар 5">
-            </label>
-            <label class="avatar-option">
-              <input type="radio" name="avatarUrl" value="/img/icon_avatar_6.svg">
+            </div>
+            <div class="avatar-option-modal" data-avatar="/img/icon_avatar_6.svg">
               <img src="/img/icon_avatar_6.svg" alt="Аватар 6">
-            </label>
+            </div>
           </div>
-        </fieldset>
+          <input type="hidden" id="project-avatar-input" name="avatarUrl" value="/img/icon_avatar_1.svg">
+        </div>
         <button type="submit">Создать</button>
       </form>
     </div>
   </div>
 
   <div class="modal" id="auth-modal" hidden>
-    <div class="modal-dialog">
+    <div class="modal-content auth-modal">
       <button class="modal-close" type="button" aria-label="Закрыть">×</button>
-      <div class="tabs">
-        <button class="tab-button active" data-tab="login">Вход</button>
-        <button class="tab-button" data-tab="register">Регистрация</button>
+      <div class="auth-header">
+        <h2>Добро пожаловать</h2>
       </div>
-      <div class="tab-content" data-tab="login">
-        <form id="login-form">
-          <label>Имя пользователя<input name="username" required></label>
-          <label>Пароль<input type="password" name="password" required></label>
-          <button type="submit">Войти</button>
-        </form>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Вход</button>
+        <button class="auth-tab" data-tab="register">Регистрация</button>
       </div>
-      <div class="tab-content" data-tab="register" hidden>
-        <form id="register-form">
-          <label>Имя пользователя<input name="username" required></label>
-          <label>Пароль<input type="password" name="password" required></label>
-          <label>Номер телефона<input name="phone" required></label>
-          <label>Почта<input type="email" name="email" required></label>
-          <button type="submit">Зарегистрироваться</button>
-        </form>
+      <div class="auth-content">
+        <div class="auth-form-container" data-tab="login">
+          <form id="login-form" class="auth-form">
+            <div class="form-field">
+              <label for="login-username">Имя пользователя</label>
+              <input type="text" id="login-username" name="username" required placeholder="Введите имя пользователя">
+            </div>
+            <div class="form-field">
+              <label for="login-password">Пароль</label>
+              <input type="password" id="login-password" name="password" required placeholder="Введите пароль">
+            </div>
+            <button type="submit" class="btn-auth">Войти</button>
+          </form>
+        </div>
+        <div class="auth-form-container" data-tab="register" hidden>
+          <form id="register-form" class="auth-form">
+            <div class="form-field">
+              <label for="register-username">Имя пользователя</label>
+              <input type="text" id="register-username" name="username" required placeholder="Выберите имя пользователя">
+            </div>
+            <div class="form-field">
+              <label for="register-password">Пароль</label>
+              <input type="password" id="register-password" name="password" required placeholder="Создайте пароль">
+            </div>
+            <div class="form-field">
+              <label for="register-phone">Телефон</label>
+              <input type="text" id="register-phone" name="phone" required placeholder="+7 (xxx) xxx-xx-xx">
+            </div>
+            <div class="form-field">
+              <label for="register-email">Email</label>
+              <input type="email" id="register-email" name="email" required placeholder="your@email.com">
+            </div>
+            <button type="submit" class="btn-auth">Зарегистрироваться</button>
+          </form>
+        </div>
       </div>
     </div>
   </div>

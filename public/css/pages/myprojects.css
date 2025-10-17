@@ -11,8 +11,9 @@ body[data-page="myprojects"] .projects h2 { margin: 0 0 8px 0; font-size: 18px; 
 body[data-page="myprojects"] .projects-list {
   border: 1px solid var(--border);
   border-radius: 8px;
-  height: calc(100vh - var(--navbar-size) - 120px);
-  overflow: auto;
+  max-height: calc(100vh - var(--navbar-size) - 140px);
+  overflow-y: auto;
+  overflow-x: hidden;
   display: grid;
   gap: 15px;
   padding: 8px;
@@ -22,15 +23,107 @@ body[data-page="myprojects"] .project-row {
   display: grid;
   grid-template-columns: 1fr minmax(120px, 160px) 160px;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 12px 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: transparent;
+  border-radius: 10px;
+  background: var(--bg-elev);
+  height: 56px;
+  transition: all 0.2s;
 }
-body[data-page="myprojects"] .project-row { height: 50px; }
-body[data-page="myprojects"] .project-name { text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-body[data-page="myprojects"] .project-participants { text-align: center; color: var(--muted); }
-body[data-page="myprojects"] .project-action { display: flex; justify-content: flex-end; color: var(--muted); }
-body[data-page="myprojects"] .project-action .role { border: 1px solid var(--border); padding: 4px 8px; border-radius: 8px; }
+body[data-page="myprojects"] .project-row:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+body[data-page="myprojects"] .project-name { 
+  text-align: left; 
+  overflow: hidden; 
+  white-space: nowrap; 
+  text-overflow: ellipsis; 
+  font-weight: 500;
+}
+body[data-page="myprojects"] .project-participants { 
+  text-align: center; 
+  color: var(--muted); 
+  font-size: 14px;
+}
+body[data-page="myprojects"] .project-participants .count {
+  font-weight: 600;
+  color: var(--fg);
+}
+body[data-page="myprojects"] .project-action { 
+  display: flex; 
+  justify-content: flex-end; 
+}
+body[data-page="myprojects"] .project-action .role { 
+  border: 1px solid var(--primary); 
+  padding: 6px 12px; 
+  border-radius: 6px; 
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--fg);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* Адаптивный дизайн для страницы "Мои проекты" */
+@media (max-width: 768px) {
+  body[data-page="myprojects"] h1 {
+    font-size: 24px;
+    text-align: center;
+  }
+
+  body[data-page="myprojects"] .projects h2 {
+    font-size: 16px;
+  }
+
+  body[data-page="myprojects"] .projects-list {
+    max-height: calc(100vh - var(--navbar-size) - 120px);
+    padding: 4px;
+    gap: 10px;
+  }
+
+  body[data-page="myprojects"] .project-row {
+    grid-template-columns: 1fr auto;
+    padding: 10px 12px;
+    height: auto;
+    gap: 10px;
+  }
+
+  body[data-page="myprojects"] .project-name {
+    font-size: 14px;
+  }
+
+  body[data-page="myprojects"] .project-participants {
+    display: none;
+  }
+
+  body[data-page="myprojects"] .project-action .role {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  body[data-page="myprojects"] h1 {
+    font-size: 20px;
+  }
+
+  body[data-page="myprojects"] .projects h2 {
+    font-size: 14px;
+  }
+
+  body[data-page="myprojects"] .project-row {
+    padding: 8px 10px;
+  }
+
+  body[data-page="myprojects"] .project-name {
+    font-size: 13px;
+  }
+
+  body[data-page="myprojects"] .project-action .role {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+}
 

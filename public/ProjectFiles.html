@@ -11,6 +11,11 @@
 </head>
 <body data-page="project-files">
   <nav class="navbar">
+    <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Меню">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <div class="nav-left">
       <a href="/">Главная</a>
       <a href="/MyProjects">Мои проекты</a>
@@ -19,6 +24,14 @@
       <button class="theme-toggle" type="button" aria-label="Сменить тему"></button>
       <a href="/Profile" class="profile-link hidden" id="profile-link">Профиль</a>
       <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
+    </div>
+    <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dropdown-content">
+        <a href="/">Главная</a>
+        <a href="/MyProjects">Мои проекты</a>
+        <a href="/Profile" class="profile-link-mobile hidden">Профиль</a>
+        <button class="auth-open-mobile" type="button">Войти/Регистрация</button>
+      </div>
     </div>
   </nav>
   <main class="container project-layout">
@@ -33,11 +46,59 @@
       </nav>
     </aside>
     <section class="project-content">
-      <h1>Файлы</h1>
+      <div class="files-header">
+        <h1>Файлы</h1>
+        <div class="files-controls">
+          <select id="sort-order" class="sort-select">
+            <option value="desc">Сначала новые</option>
+            <option value="asc">Сначала старые</option>
+          </select>
+          <button id="add-files-btn" class="btn-primary">Добавить файлы</button>
+        </div>
+      </div>
+      <div id="files-list" class="files-list">
+        <!-- Файлы загружаются динамически -->
+      </div>
     </section>
   </main>
+
+  <!-- Модальное окно добавления файлов -->
+  <div id="add-files-modal" class="modal" hidden>
+    <div class="modal-content files-modal">
+      <button class="modal-close" type="button">&times;</button>
+      <h2>Добавить файлы</h2>
+      <form id="add-files-form">
+        <div class="form-group">
+          <label for="files-topic">Тема файлов</label>
+          <input type="text" id="files-topic" name="topic" required placeholder="Например: Документация, Исходники">
+        </div>
+        <div class="form-group">
+          <label for="files-input">Выберите файлы</label>
+          <input type="file" id="files-input" name="files" multiple required>
+          <div id="files-preview" class="files-preview"></div>
+        </div>
+        <button type="submit" class="btn-primary">Загрузить файлы</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mobile project navigation -->
+  <button class="project-nav-toggle" id="project-nav-toggle" type="button" aria-label="Навигация проекта">☰</button>
+  <div class="project-nav-mobile" id="project-nav-mobile">
+    <div class="project-nav-mobile-content">
+      <a href="/Project.html" class="project-nav-link">Главная</a>
+      <a href="/ProjectTasks.html" class="project-nav-link">Задачи</a>
+      <a href="/ProjectFiles.html" class="project-nav-link active">Файлы</a>
+      <a href="/ProjectStages.html" class="project-nav-link">Этапы</a>
+      <a href="/ProjectMembers.html" class="project-nav-link">Участники</a>
+      <a href="/ProjectSettings.html" class="project-nav-link only-manager" hidden>Настройки проекта</a>
+    </div>
+  </div>
+
   <script src="/js/main.js" defer></script>
   <script src="/js/project.js" defer></script>
+  <script src="/js/project-files.js" defer></script>
+  <script src="/js/project-nav-mobile.js" defer></script>
 </body>
 </html>
 

@@ -3,17 +3,19 @@ const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
+const multer = require('multer');
+const fs = require('fs');
 const db = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 
-// Сессии
+// Сессии (срок действия - 7 дней)
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 24 }
+  cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 } // 7 дней
 }));
 
 // Обновляем last_seen для авторизованных пользователей
@@ -31,6 +33,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Отдача статических файлов
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Базовые роуты для страниц (опционально, так как статические файлы уже отдаются)
 app.get('/', (req, res) => {
@@ -48,7 +51,7 @@ app.get('/Profile', (req, res) => {
 // API: Авторизация
 app.get('/api/me', (req, res) => {
   if (!req.session.user) return res.json({ ok: true, user: null });
-  db.get('SELECT id, username, email, phone FROM users WHERE id = ?', [req.session.user.id], (err, row) => {
+  db.get('SELECT id, username, display_name, email, phone FROM users WHERE id = ?', [req.session.user.id], (err, row) => {
     if (err) return res.status(500).json({ ok: false, error: 'DB error' });
     if (!row) return res.json({ ok: true, user: null });
     res.json({ ok: true, user: row });
@@ -58,7 +61,7 @@ app.get('/api/me', (req, res) => {
 // Публичная информация о пользователе (просмотр чужих профилей)
 app.get('/api/users/:id', (req, res) => {
   const userId = req.params.id;
-  db.get('SELECT id, username, email FROM users WHERE id = ?', [userId], (err, row) => {
+  db.get('SELECT id, username, display_name, email FROM users WHERE id = ?', [userId], (err, row) => {
     if (err) return res.status(500).json({ ok: false, error: 'DB error' });
     if (!row) return res.status(404).json({ ok: false, error: 'Not found' });
     res.json({ ok: true, user: row });
@@ -292,6 +295,84 @@ app.get('/api/projects/:id', (req, res) => {
   });
 });
 
+// Обновление проекта (только управляющий)
+app.put('/api/projects/:id', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  const projectId = req.params.id;
+  const userId = req.session.user.id;
+  const { name, model, topic, projectType, avatarUrl } = req.body || {};
+
+  // Проверяем, что пользователь является управляющим
+  db.get('SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?', [projectId, userId], (err, membership) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    if (!membership || membership.role !== 'manager') {
+      return res.status(403).json({ ok: false, error: 'Only manager can update project' });
+    }
+
+    // Валидация: название обязательно
+    if (!name || String(name).trim().length === 0) {
+      return res.status(400).json({ ok: false, error: 'Name required' });
+    }
+
+    const sets = [];
+    const params = [];
+
+    sets.push('name = ?');
+    params.push(String(name).trim());
+
+    if (typeof model === 'string') {
+      sets.push('model = ?');
+      params.push(model);
+    }
+
+    if (typeof topic === 'string') {
+      sets.push('topic = ?');
+      params.push(topic);
+    }
+
+    if (typeof projectType === 'string') {
+      sets.push('project_type = ?');
+      params.push(projectType);
+    }
+
+    if (typeof avatarUrl === 'string') {
+      sets.push('avatar_url = ?');
+      params.push(avatarUrl);
+    }
+
+    params.push(projectId);
+    const sql = `UPDATE projects SET ${sets.join(', ')} WHERE id = ?`;
+
+    db.run(sql, params, function(updateErr) {
+      if (updateErr) return res.status(500).json({ ok: false, error: 'DB error' });
+      if (this.changes === 0) return res.status(404).json({ ok: false, error: 'Project not found' });
+      res.json({ ok: true });
+    });
+  });
+});
+
+// Удаление проекта (только управляющий)
+app.delete('/api/projects/:id', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  const projectId = req.params.id;
+  const userId = req.session.user.id;
+
+  // Проверяем, что пользователь является управляющим
+  db.get('SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?', [projectId, userId], (err, membership) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    if (!membership || membership.role !== 'manager') {
+      return res.status(403).json({ ok: false, error: 'Only manager can delete project' });
+    }
+
+    // Удаляем проект (каскадное удаление членства и других связанных данных настроено через foreign keys)
+    db.run('DELETE FROM projects WHERE id = ?', [projectId], function(deleteErr) {
+      if (deleteErr) return res.status(500).json({ ok: false, error: 'DB error' });
+      if (this.changes === 0) return res.status(404).json({ ok: false, error: 'Project not found' });
+      res.json({ ok: true });
+    });
+  });
+});
+
 // Членство/роль текущего пользователя в проекте
 app.get('/api/projects/:id/me', (req, res) => {
   if (!req.session.user) return res.json({ ok: true, membership: null });
@@ -307,7 +388,7 @@ app.get('/api/projects/:id/me', (req, res) => {
 app.get('/api/projects/:id/participants', (req, res) => {
   const projectId = req.params.id;
   const sql = `
-    SELECT u.id, u.username, u.last_seen, m.role
+    SELECT u.id, u.username, u.display_name, u.last_seen, m.role
     FROM project_memberships m
     JOIN users u ON u.id = m.user_id
     WHERE m.project_id = ?
@@ -319,7 +400,7 @@ app.get('/api/projects/:id/participants', (req, res) => {
     const participants = (rows || []).map(r => {
       const last = r.last_seen ? Date.parse(r.last_seen) : 0;
       const online = last && (now - last) <= 2 * 60 * 1000; // 2 минуты
-      return { id: r.id, username: r.username, role: r.role, online };
+      return { id: r.id, username: r.username, display_name: r.display_name, role: r.role, online };
     });
     res.json({ ok: true, participants });
   });
@@ -349,6 +430,56 @@ app.post('/api/projects/:id/kick', (req, res) => {
           if (e) return res.status(500).json({ ok: false, error: 'DB error' });
           res.json({ ok: true });
         });
+      });
+    });
+  });
+});
+
+// Повышение участника до заместителя (только для управляющего)
+app.post('/api/projects/:id/promote', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  const projectId = req.params.id;
+  const { userId } = req.body || {};
+  const actorId = req.session.user.id;
+  if (!userId) return res.status(400).json({ ok: false, error: 'userId required' });
+  
+  db.get('SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?', [projectId, actorId], (err, actor) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    if (!actor || actor.role !== 'manager') return res.status(403).json({ ok: false, error: 'Only manager can promote' });
+    
+    db.get('SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?', [projectId, userId], (err2, target) => {
+      if (err2) return res.status(500).json({ ok: false, error: 'DB error' });
+      if (!target) return res.status(404).json({ ok: false, error: 'Not a member' });
+      if (target.role !== 'member') return res.status(400).json({ ok: false, error: 'Can only promote members' });
+      
+      db.run('UPDATE project_memberships SET role = "deputy" WHERE project_id = ? AND user_id = ?', [projectId, userId], function(updErr){
+        if (updErr) return res.status(500).json({ ok: false, error: 'DB error' });
+        res.json({ ok: true });
+      });
+    });
+  });
+});
+
+// Понижение заместителя до участника (только для управляющего)
+app.post('/api/projects/:id/demote', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  const projectId = req.params.id;
+  const { userId } = req.body || {};
+  const actorId = req.session.user.id;
+  if (!userId) return res.status(400).json({ ok: false, error: 'userId required' });
+  
+  db.get('SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?', [projectId, actorId], (err, actor) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    if (!actor || actor.role !== 'manager') return res.status(403).json({ ok: false, error: 'Only manager can demote' });
+    
+    db.get('SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?', [projectId, userId], (err2, target) => {
+      if (err2) return res.status(500).json({ ok: false, error: 'DB error' });
+      if (!target) return res.status(404).json({ ok: false, error: 'Not a member' });
+      if (target.role !== 'deputy') return res.status(400).json({ ok: false, error: 'Can only demote deputies' });
+      
+      db.run('UPDATE project_memberships SET role = "member" WHERE project_id = ? AND user_id = ?', [projectId, userId], function(updErr){
+        if (updErr) return res.status(500).json({ ok: false, error: 'DB error' });
+        res.json({ ok: true });
       });
     });
   });
@@ -394,8 +525,8 @@ app.get('/api/projects/:id/requests', (req, res) => {
     if (!actor || (actor.role !== 'manager' && actor.role !== 'deputy')) {
       return res.status(403).json({ ok: false, error: 'Forbidden' });
     }
-    const joinSql = `SELECT r.id, u.username, r.user_id, r.status FROM project_join_requests r JOIN users u ON u.id = r.user_id WHERE r.project_id = ? AND r.status = 'pending'`;
-    const promSql = `SELECT r.id, u.username, r.user_id, r.status FROM project_promotion_requests r JOIN users u ON u.id = r.user_id WHERE r.project_id = ? AND r.status = 'pending'`;
+    const joinSql = `SELECT r.id, u.username, u.display_name, r.user_id, r.status FROM project_join_requests r JOIN users u ON u.id = r.user_id WHERE r.project_id = ? AND r.status = 'pending'`;
+    const promSql = `SELECT r.id, u.username, u.display_name, r.user_id, r.status FROM project_promotion_requests r JOIN users u ON u.id = r.user_id WHERE r.project_id = ? AND r.status = 'pending'`;
     db.all(joinSql, [projectId], (e1, joins) => {
       if (e1) return res.status(500).json({ ok: false, error: 'DB error' });
       if (actor.role !== 'manager') {
@@ -556,6 +687,696 @@ app.post('/api/projects/:id/join', (req, res) => {
       );
     }
   );
+});
+
+// Настройка multer для загрузки файлов
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${uuidv4()}-${file.originalname}`;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB max
+});
+
+// API для файлов проекта
+// Загрузка файлов
+app.post('/api/project-files', upload.array('files', 10), (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  
+  const { projectId, topic } = req.body || {};
+  const userId = req.session.user.id;
+  const uploadedFiles = req.files || [];
+
+  if (!projectId || !topic || uploadedFiles.length === 0) {
+    // Удаляем загруженные файлы при ошибке
+    uploadedFiles.forEach(file => {
+      try { fs.unlinkSync(file.path); } catch {}
+    });
+    return res.status(400).json({ ok: false, error: 'Missing required fields' });
+  }
+
+  // Проверяем членство в проекте
+  db.get('SELECT 1 FROM project_memberships WHERE project_id = ? AND user_id = ?', [projectId, userId], (err, membership) => {
+    if (err || !membership) {
+      uploadedFiles.forEach(file => {
+        try { fs.unlinkSync(file.path); } catch {}
+      });
+      return res.status(403).json({ ok: false, error: 'Not a member' });
+    }
+
+    const groupId = uuidv4();
+    const createdAt = new Date().toISOString();
+
+    db.serialize(() => {
+      db.run('BEGIN TRANSACTION');
+
+      // Создаем группу файлов
+      db.run(
+        'INSERT INTO project_file_groups (id, project_id, topic, created_at, created_by) VALUES (?, ?, ?, ?, ?)',
+        [groupId, projectId, topic, createdAt, userId],
+        function(groupErr) {
+          if (groupErr) {
+            db.run('ROLLBACK');
+            uploadedFiles.forEach(file => {
+              try { fs.unlinkSync(file.path); } catch {}
+            });
+            return res.status(500).json({ ok: false, error: 'DB error' });
+          }
+
+          // Добавляем файлы
+          let insertedCount = 0;
+          uploadedFiles.forEach(file => {
+            const fileId = uuidv4();
+            db.run(
+              'INSERT INTO project_files (id, group_id, filename, file_path, file_size, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+              [fileId, groupId, file.originalname, file.path, file.size, createdAt],
+              function(fileErr) {
+                if (fileErr) {
+                  db.run('ROLLBACK');
+                  uploadedFiles.forEach(f => {
+                    try { fs.unlinkSync(f.path); } catch {}
+                  });
+                  return res.status(500).json({ ok: false, error: 'DB error' });
+                }
+                
+                insertedCount++;
+                if (insertedCount === uploadedFiles.length) {
+                  db.run('COMMIT', (commitErr) => {
+                    if (commitErr) {
+                      uploadedFiles.forEach(f => {
+                        try { fs.unlinkSync(f.path); } catch {}
+                      });
+                      return res.status(500).json({ ok: false, error: 'DB error' });
+                    }
+                    res.json({ ok: true, groupId });
+                  });
+                }
+              }
+            );
+          });
+        }
+      );
+    });
+  });
+});
+
+// Получение групп файлов проекта
+app.get('/api/projects/:id/file-groups', (req, res) => {
+  const projectId = req.params.id;
+  
+  const sql = `
+    SELECT 
+      g.id, 
+      g.topic, 
+      g.created_at, 
+      g.created_by,
+      u.username as created_by_username
+    FROM project_file_groups g
+    LEFT JOIN users u ON u.id = g.created_by
+    WHERE g.project_id = ?
+    ORDER BY g.created_at DESC
+  `;
+
+  db.all(sql, [projectId], (err, groups) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    
+    if (!groups || groups.length === 0) {
+      return res.json({ ok: true, groups: [] });
+    }
+
+    // Загружаем файлы для каждой группы
+    const groupsWithFiles = [];
+    let processed = 0;
+
+    groups.forEach(group => {
+      db.all('SELECT id, filename, file_size, created_at FROM project_files WHERE group_id = ?', [group.id], (fileErr, files) => {
+        if (!fileErr) {
+          group.files = files || [];
+        } else {
+          group.files = [];
+        }
+        
+        groupsWithFiles.push(group);
+        processed++;
+
+        if (processed === groups.length) {
+          res.json({ ok: true, groups: groupsWithFiles });
+        }
+      });
+    });
+  });
+});
+
+// Получить все файлы проекта (из групп файлов и из задач)
+app.get('/api/projects/:id/all-files', (req, res) => {
+  const projectId = req.params.id;
+  
+  // Получаем файлы из групп файлов
+  const fileGroupsSql = `
+    SELECT 
+      g.id, 
+      g.topic, 
+      g.created_at, 
+      g.created_by,
+      u.username as created_by_username,
+      'file_group' as source_type,
+      NULL as task_id,
+      NULL as task_title
+    FROM project_file_groups g
+    LEFT JOIN users u ON u.id = g.created_by
+    WHERE g.project_id = ?
+  `;
+
+  // Получаем задачи с файлами
+  const tasksSql = `
+    SELECT 
+      t.id,
+      t.title as topic,
+      t.created_at,
+      t.created_by,
+      u.username as created_by_username,
+      'task' as source_type,
+      t.id as task_id,
+      t.title as task_title
+    FROM project_tasks t
+    LEFT JOIN users u ON u.id = t.created_by
+    WHERE t.project_id = ? AND EXISTS (SELECT 1 FROM project_task_files WHERE task_id = t.id)
+  `;
+
+  db.all(fileGroupsSql, [projectId], (err1, fileGroups) => {
+    if (err1) return res.status(500).json({ ok: false, error: 'DB error' });
+
+    db.all(tasksSql, [projectId], (err2, tasks) => {
+      if (err2) return res.status(500).json({ ok: false, error: 'DB error' });
+
+      const allGroups = [...(fileGroups || []), ...(tasks || [])];
+
+      if (allGroups.length === 0) {
+        return res.json({ ok: true, groups: [] });
+      }
+
+      // Загружаем файлы для каждой группы
+      const groupsWithFiles = [];
+      let processed = 0;
+
+      allGroups.forEach(group => {
+        if (group.source_type === 'file_group') {
+          db.all('SELECT id, filename, file_size, created_at FROM project_files WHERE group_id = ?', [group.id], (fileErr, files) => {
+            group.files = fileErr ? [] : (files || []);
+            groupsWithFiles.push(group);
+            processed++;
+            if (processed === allGroups.length) {
+              res.json({ ok: true, groups: groupsWithFiles });
+            }
+          });
+        } else {
+          db.all('SELECT id, filename, file_size, created_at FROM project_task_files WHERE task_id = ?', [group.id], (fileErr, files) => {
+            group.files = fileErr ? [] : (files || []);
+            groupsWithFiles.push(group);
+            processed++;
+            if (processed === allGroups.length) {
+              res.json({ ok: true, groups: groupsWithFiles });
+            }
+          });
+        }
+      });
+    });
+  });
+});
+
+// Скачивание файла
+app.get('/api/project-files/:fileId/download', (req, res) => {
+  const fileId = req.params.fileId;
+
+  db.get('SELECT * FROM project_files WHERE id = ?', [fileId], (err, file) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    if (!file) return res.status(404).json({ ok: false, error: 'File not found' });
+
+    // Проверяем существование файла
+    if (!fs.existsSync(file.file_path)) {
+      return res.status(404).json({ ok: false, error: 'File not found on disk' });
+    }
+
+    res.download(file.file_path, file.filename);
+  });
+});
+
+// Удаление файла
+app.delete('/api/project-files/:fileId', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  
+  const fileId = req.params.fileId;
+  const userId = req.session.user.id;
+
+  // Получаем информацию о файле и проверяем права
+  const sql = `
+    SELECT f.*, g.project_id, g.created_by
+    FROM project_files f
+    JOIN project_file_groups g ON g.id = f.group_id
+    WHERE f.id = ?
+  `;
+
+  db.get(sql, [fileId], (err, file) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    if (!file) return res.status(404).json({ ok: false, error: 'File not found' });
+
+    // Проверяем права: управляющий, заместитель или создатель группы
+    db.get(
+      'SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?',
+      [file.project_id, userId],
+      (memErr, membership) => {
+        if (memErr) return res.status(500).json({ ok: false, error: 'DB error' });
+        
+        const canDelete = membership && (
+          membership.role === 'manager' || 
+          membership.role === 'deputy' || 
+          file.created_by === userId
+        );
+
+        if (!canDelete) {
+          return res.status(403).json({ ok: false, error: 'Forbidden' });
+        }
+
+        // Удаляем файл из БД
+        db.run('DELETE FROM project_files WHERE id = ?', [fileId], function(delErr) {
+          if (delErr) return res.status(500).json({ ok: false, error: 'DB error' });
+
+          // Удаляем файл с диска
+          try {
+            if (fs.existsSync(file.file_path)) {
+              fs.unlinkSync(file.file_path);
+            }
+          } catch (fsErr) {
+            console.error('Error deleting file from disk:', fsErr);
+          }
+
+          // Проверяем, остались ли файлы в группе
+          db.get('SELECT COUNT(*) as count FROM project_files WHERE group_id = ?', [file.group_id], (cntErr, result) => {
+            if (!cntErr && result && result.count === 0) {
+              // Удаляем пустую группу
+              db.run('DELETE FROM project_file_groups WHERE id = ?', [file.group_id]);
+            }
+            res.json({ ok: true });
+          });
+        });
+      }
+    );
+  });
+});
+
+// === TASKS ENDPOINTS ===
+
+// Получение задач проекта
+app.get('/api/projects/:id/tasks', (req, res) => {
+  const projectId = req.params.id;
+  
+  const sql = `
+    SELECT 
+      t.id, 
+      t.title, 
+      t.description,
+      t.created_at, 
+      t.created_by,
+      u.username as created_by_username
+    FROM project_tasks t
+    LEFT JOIN users u ON u.id = t.created_by
+    WHERE t.project_id = ?
+    ORDER BY t.created_at DESC
+  `;
+
+  db.all(sql, [projectId], (err, tasks) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    
+    if (!tasks || tasks.length === 0) {
+      return res.json({ ok: true, tasks: [] });
+    }
+
+    // Загружаем файлы для каждой задачи
+    const tasksWithFiles = [];
+    let processed = 0;
+
+    tasks.forEach(task => {
+      db.all('SELECT id, filename, file_size, created_at FROM project_task_files WHERE task_id = ?', [task.id], (fileErr, files) => {
+        if (!fileErr) {
+          task.files = files || [];
+        } else {
+          task.files = [];
+        }
+        
+        tasksWithFiles.push(task);
+        processed++;
+
+        if (processed === tasks.length) {
+          res.json({ ok: true, tasks: tasksWithFiles });
+        }
+      });
+    });
+  });
+});
+
+// Создание задачи
+app.post('/api/projects/:id/tasks', upload.array('files', 10), (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+
+  const projectId = req.params.id;
+  const userId = req.session.user.id;
+  const { title, description } = req.body;
+
+  console.log('Creating task:', { projectId, userId, title, description, filesCount: req.files?.length || 0 });
+
+  if (!title || !title.trim()) {
+    // Удаляем загруженные файлы если есть
+    if (req.files) {
+      req.files.forEach(file => {
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      });
+    }
+    return res.status(400).json({ ok: false, error: 'Title required' });
+  }
+
+  // Проверяем права: управляющий или заместитель
+  db.get(
+    'SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?',
+    [projectId, userId],
+    (memErr, membership) => {
+      if (memErr) return res.status(500).json({ ok: false, error: 'DB error' });
+      
+      if (!membership || (membership.role !== 'manager' && membership.role !== 'deputy')) {
+        // Удаляем загруженные файлы
+        if (req.files) {
+          req.files.forEach(file => {
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+          });
+        }
+        return res.status(403).json({ ok: false, error: 'Only manager/deputy can create tasks' });
+      }
+
+      const taskId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+      const createdAt = new Date().toISOString();
+
+      // Создаем задачу
+      db.run(
+        'INSERT INTO project_tasks (id, project_id, title, description, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+        [taskId, projectId, title.trim(), description?.trim() || null, createdAt, userId],
+        function(taskErr) {
+          if (taskErr) {
+            // Удаляем загруженные файлы
+            if (req.files) {
+              req.files.forEach(file => {
+                if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+              });
+            }
+            return res.status(500).json({ ok: false, error: 'DB error' });
+          }
+
+          // Если есть файлы, добавляем их
+          if (req.files && req.files.length > 0) {
+            let filesAdded = 0;
+            req.files.forEach(file => {
+              const fileId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+              db.run(
+                'INSERT INTO project_task_files (id, task_id, filename, file_path, file_size, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                [fileId, taskId, file.originalname, file.path, file.size, createdAt],
+                (fileInsertErr) => {
+                  if (fileInsertErr) {
+                    console.error('Error inserting file:', fileInsertErr);
+                    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                  }
+                  filesAdded++;
+                  if (filesAdded === req.files.length) {
+                    console.log('Task created successfully:', taskId);
+                    res.json({ ok: true, taskId });
+                  }
+                }
+              );
+            });
+          } else {
+            console.log('Task created successfully (no files):', taskId);
+            res.json({ ok: true, taskId });
+          }
+        }
+      );
+    }
+  );
+});
+
+// Добавление файлов к существующей задаче
+app.post('/api/projects/:id/tasks/:taskId/files', upload.array('files', 10), (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+
+  const projectId = req.params.id;
+  const taskId = req.params.taskId;
+  const userId = req.session.user.id;
+
+  console.log('Adding files to task:', { projectId, taskId, userId, filesCount: req.files?.length || 0 });
+
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ ok: false, error: 'No files provided' });
+  }
+
+  // Проверяем права: управляющий или заместитель
+  db.get(
+    'SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?',
+    [projectId, userId],
+    (memErr, membership) => {
+      if (memErr) {
+        // Удаляем загруженные файлы
+        req.files.forEach(file => {
+          if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        });
+        return res.status(500).json({ ok: false, error: 'DB error' });
+      }
+      
+      if (!membership || (membership.role !== 'manager' && membership.role !== 'deputy')) {
+        // Удаляем загруженные файлы
+        req.files.forEach(file => {
+          if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        });
+        return res.status(403).json({ ok: false, error: 'Only manager/deputy can add files to tasks' });
+      }
+
+      const createdAt = new Date().toISOString();
+      let filesAdded = 0;
+
+      req.files.forEach(file => {
+        const fileId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+        db.run(
+          'INSERT INTO project_task_files (id, task_id, filename, file_path, file_size, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+          [fileId, taskId, file.originalname, file.path, file.size, createdAt],
+          (fileInsertErr) => {
+            if (fileInsertErr) {
+              console.error('Error inserting file:', fileInsertErr);
+              if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            }
+            filesAdded++;
+            if (filesAdded === req.files.length) {
+              console.log('Files added to task successfully');
+              res.json({ ok: true });
+            }
+          }
+        );
+      });
+    }
+  );
+});
+
+// Скачивание файла задачи
+app.get('/api/projects/:id/tasks/:taskId/files/:fileId/download', (req, res) => {
+  const fileId = req.params.fileId;
+
+  db.get('SELECT * FROM project_task_files WHERE id = ?', [fileId], (err, file) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    if (!file) return res.status(404).json({ ok: false, error: 'File not found' });
+
+    // Проверяем существование файла
+    if (!fs.existsSync(file.file_path)) {
+      return res.status(404).json({ ok: false, error: 'File not found on disk' });
+    }
+
+    res.download(file.file_path, file.filename);
+  });
+});
+
+// Удаление файла задачи
+app.delete('/api/projects/:id/tasks/:taskId/files/:fileId', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  
+  const fileId = req.params.fileId;
+  const userId = req.session.user.id;
+  const projectId = req.params.id;
+
+  // Получаем информацию о файле
+  const sql = `
+    SELECT f.*, t.created_by
+    FROM project_task_files f
+    JOIN project_tasks t ON t.id = f.task_id
+    WHERE f.id = ?
+  `;
+
+  db.get(sql, [fileId], (err, file) => {
+    if (err) return res.status(500).json({ ok: false, error: 'DB error' });
+    if (!file) return res.status(404).json({ ok: false, error: 'File not found' });
+
+    // Проверяем права: управляющий, заместитель или создатель задачи
+    db.get(
+      'SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?',
+      [projectId, userId],
+      (memErr, membership) => {
+        if (memErr) return res.status(500).json({ ok: false, error: 'DB error' });
+        
+        const canDelete = membership && (
+          membership.role === 'manager' || 
+          membership.role === 'deputy' || 
+          file.created_by === userId
+        );
+
+        if (!canDelete) {
+          return res.status(403).json({ ok: false, error: 'Forbidden' });
+        }
+
+        // Удаляем файл из БД
+        db.run('DELETE FROM project_task_files WHERE id = ?', [fileId], function(delErr) {
+          if (delErr) return res.status(500).json({ ok: false, error: 'DB error' });
+
+          // Удаляем файл с диска
+          try {
+            if (fs.existsSync(file.file_path)) {
+              fs.unlinkSync(file.file_path);
+            }
+          } catch (fsErr) {
+            console.error('Error deleting file from disk:', fsErr);
+          }
+
+          res.json({ ok: true });
+        });
+      }
+    );
+  });
+});
+
+// Удаление задачи
+app.delete('/api/projects/:id/tasks/:taskId', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  
+  const taskId = req.params.taskId;
+  const userId = req.session.user.id;
+  const projectId = req.params.id;
+
+  // Проверяем права: управляющий или заместитель
+  db.get(
+    'SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?',
+    [projectId, userId],
+    (memErr, membership) => {
+      if (memErr) return res.status(500).json({ ok: false, error: 'DB error' });
+      
+      if (!membership || (membership.role !== 'manager' && membership.role !== 'deputy')) {
+        return res.status(403).json({ ok: false, error: 'Only manager/deputy can delete tasks' });
+      }
+
+      // Получаем все файлы задачи для удаления с диска
+      db.all('SELECT file_path FROM project_task_files WHERE task_id = ?', [taskId], (fileErr, files) => {
+        if (fileErr) return res.status(500).json({ ok: false, error: 'DB error' });
+
+        // Удаляем задачу (файлы удалятся автоматически через CASCADE)
+        db.run('DELETE FROM project_tasks WHERE id = ?', [taskId], function(delErr) {
+          if (delErr) return res.status(500).json({ ok: false, error: 'DB error' });
+
+          // Удаляем файлы с диска
+          if (files && files.length > 0) {
+            files.forEach(file => {
+              try {
+                if (fs.existsSync(file.file_path)) {
+                  fs.unlinkSync(file.file_path);
+                }
+              } catch (fsErr) {
+                console.error('Error deleting file from disk:', fsErr);
+              }
+            });
+          }
+
+          res.json({ ok: true });
+        });
+      });
+    }
+  );
+});
+
+// API: Обновление профиля пользователя
+app.put('/api/profile', async (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  
+  const { displayName, email, phone } = req.body || {};
+  const userId = req.session.user.id;
+  
+  // Валидация телефона
+  if (phone && !phone.startsWith('+')) {
+    return res.status(400).json({ ok: false, error: 'Phone must start with +' });
+  }
+  
+  // Проверка на уникальность email и phone (только если они переданы и не пустые)
+  let checkSql = 'SELECT id FROM users WHERE id != ?';
+  let checkParams = [userId];
+  
+  if (email && email.trim() !== '') {
+    checkSql += ' AND email = ?';
+    checkParams.push(email.trim());
+  }
+  
+  if (phone && phone.trim() !== '') {
+    checkSql += (email && email.trim() !== '' ? ' OR ' : ' AND ') + 'phone = ?';
+    checkParams.push(phone.trim());
+  }
+  
+  // Если нет email и phone для проверки, пропускаем проверку
+  if (checkParams.length === 1) {
+    checkSql = null;
+  }
+  
+  const performUpdate = () => {
+    // Обновляем профиль
+    db.run(
+      'UPDATE users SET display_name = ?, email = ?, phone = ? WHERE id = ?',
+      [displayName || null, email || '', phone || '', userId],
+      function(updateErr) {
+        if (updateErr) {
+          return res.status(500).json({ ok: false, error: 'DB error' });
+        }
+        
+        // Возвращаем обновленные данные
+        db.get('SELECT id, username, display_name, email, phone FROM users WHERE id = ?', [userId], (finalErr, updated) => {
+          if (finalErr) return res.status(500).json({ ok: false, error: 'DB error' });
+          res.json({ ok: true, user: updated });
+        });
+      }
+    );
+  };
+  
+  // Проверяем уникальность если нужно
+  if (checkSql) {
+    db.get(checkSql, checkParams, (err, row) => {
+      if (err) {
+        return res.status(500).json({ ok: false, error: 'DB error' });
+      }
+      if (row) {
+        return res.status(409).json({ ok: false, error: 'Email or phone already taken' });
+      }
+      performUpdate();
+    });
+  } else {
+    performUpdate();
+  }
 });
 
 app.listen(PORT, () => {

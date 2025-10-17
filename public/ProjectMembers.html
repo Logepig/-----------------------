@@ -11,6 +11,11 @@
 </head>
 <body data-page="project-members">
   <nav class="navbar">
+    <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Меню">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <div class="nav-left">
       <a href="/">Главная</a>
       <a href="/MyProjects">Мои проекты</a>
@@ -20,13 +25,15 @@
       <a href="/Profile" class="profile-link hidden" id="profile-link">Профиль</a>
       <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
     </div>
-  </nav>
-  <div class="under-nav">
-    <div style="text-align:right; display:flex; justify-content:flex-end; gap:8px;">
-      <button id="request-promotion-btn" class="hidden">Подать заявку на повышение</button>
-      <button id="leave-project-btn" class="hidden">Покинуть проект</button>
+    <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dropdown-content">
+        <a href="/">Главная</a>
+        <a href="/MyProjects">Мои проекты</a>
+        <a href="/Profile" class="profile-link-mobile hidden">Профиль</a>
+        <button class="auth-open-mobile" type="button">Войти/Регистрация</button>
+      </div>
     </div>
-  </div>
+  </nav>
   <main class="container project-layout">
     <aside class="project-sidenav">
       <nav class="project-nav">
@@ -39,27 +46,104 @@
       </nav>
     </aside>
     <section class="project-content">
-      <h1>Участники</h1>
-      <div class="members-layout">
-        <div class="members-list">
-          <div class="projects-list" id="members-list"></div>
+      <div class="members-header">
+        <div class="members-header-left">
+          <h1>Участники проекта</h1>
+          <div class="members-count">
+            <span id="members-total">0</span> участников
+          </div>
         </div>
-        <aside class="members-sidebar">
-          <div class="requests-box">
-            <h3>Заявки на вступление</h3>
-            <div id="join-requests"></div>
-          </div>
-          <div class="requests-box">
-            <h3>Заявки на повышение</h3>
-            <div id="promotion-requests"></div>
-          </div>
-        </aside>
+        <div class="members-header-right">
+          <button id="join-requests-btn" class="btn-requests hidden">
+            Заявки на вступление
+            <span id="join-requests-badge" class="requests-badge hidden">0</span>
+          </button>
+          <button id="leave-project-btn" class="btn-leave hidden">Покинуть проект</button>
+        </div>
       </div>
+      <div class="members-grid" id="members-list"></div>
     </section>
+  
   </main>
+
+  <!-- Модальное окно заявок на вступление -->
+  <div id="join-requests-modal" class="modal" hidden>
+    <div class="modal-content requests-modal">
+      <button class="modal-close" type="button">&times;</button>
+      <h2>Заявки на вступление</h2>
+      <div class="requests-list" id="join-requests">
+        <p class="no-requests">Нет заявок</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно авторизации -->
+  <div class="modal" id="auth-modal" hidden>
+    <div class="modal-content auth-modal">
+      <button class="modal-close" type="button" aria-label="Закрыть">×</button>
+      <div class="auth-header">
+        <h2 id="auth-title">Добро пожаловать</h2>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Вход</button>
+        <button class="auth-tab" data-tab="register">Регистрация</button>
+      </div>
+      <div class="auth-content">
+        <div class="auth-form-container" data-tab="login">
+          <form id="login-form" class="auth-form">
+            <div class="form-field">
+              <label for="login-username">Имя пользователя</label>
+              <input type="text" id="login-username" name="username" required placeholder="Введите имя пользователя">
+            </div>
+            <div class="form-field">
+              <label for="login-password">Пароль</label>
+              <input type="password" id="login-password" name="password" required placeholder="Введите пароль">
+            </div>
+            <button type="submit" class="btn-auth">Войти</button>
+          </form>
+        </div>
+        <div class="auth-form-container" data-tab="register" hidden>
+          <form id="register-form" class="auth-form">
+            <div class="form-field">
+              <label for="register-username">Имя пользователя</label>
+              <input type="text" id="register-username" name="username" required placeholder="Выберите имя пользователя">
+            </div>
+            <div class="form-field">
+              <label for="register-password">Пароль</label>
+              <input type="password" id="register-password" name="password" required placeholder="Создайте пароль">
+            </div>
+            <div class="form-field">
+              <label for="register-phone">Телефон</label>
+              <input type="text" id="register-phone" name="phone" required placeholder="+7 (xxx) xxx-xx-xx">
+            </div>
+            <div class="form-field">
+              <label for="register-email">Email</label>
+              <input type="email" id="register-email" name="email" required placeholder="your@email.com">
+            </div>
+            <button type="submit" class="btn-auth">Зарегистрироваться</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile project navigation -->
+  <button class="project-nav-toggle" id="project-nav-toggle" type="button" aria-label="Навигация проекта">☰</button>
+  <div class="project-nav-mobile" id="project-nav-mobile">
+    <div class="project-nav-mobile-content">
+      <a href="/Project.html" class="project-nav-link">Главная</a>
+      <a href="/ProjectTasks.html" class="project-nav-link">Задачи</a>
+      <a href="/ProjectFiles.html" class="project-nav-link">Файлы</a>
+      <a href="/ProjectStages.html" class="project-nav-link">Этапы</a>
+      <a href="/ProjectMembers.html" class="project-nav-link active">Участники</a>
+      <a href="/ProjectSettings.html" class="project-nav-link only-manager" hidden>Настройки проекта</a>
+    </div>
+  </div>
+
   <script src="/js/main.js" defer></script>
   <script src="/js/project.js" defer></script>
   <script src="/js/project-members.js" defer></script>
+  <script src="/js/project-nav-mobile.js" defer></script>
 </body>
 </html>
 

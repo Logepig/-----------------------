@@ -14,9 +14,9 @@
 
   const membersList = document.getElementById('members-list');
   const joinBox = document.getElementById('join-requests');
-  const promotionBox = document.getElementById('promotion-requests');
-  const requestBoxes = Array.from(document.querySelectorAll('.requests-box'));
-  const requestPromotionBtn = document.getElementById('request-promotion-btn');
+  const joinRequestsBtn = document.getElementById('join-requests-btn');
+  const joinRequestsBadge = document.getElementById('join-requests-badge');
+  const joinRequestsModal = document.getElementById('join-requests-modal');
   const leaveBtn = document.getElementById('leave-project-btn');
 
   const ROLE_RANK = { manager: 3, deputy: 2, member: 1 };
@@ -39,69 +39,87 @@
 
   function renderMembers(participants, myRole) {
     if (!membersList) return;
+    const membersTotal = document.getElementById('members-total');
+    if (membersTotal) membersTotal.textContent = participants.length;
+    
     membersList.innerHTML = participants.map(p => {
-      const showKick = myRole && ROLE_RANK[myRole] > ROLE_RANK[p.role];
+      const canPromote = myRole === 'manager' && p.role === 'member';
+      const canDemote = myRole === 'manager' && p.role === 'deputy';
+      const canRemove = myRole && ROLE_RANK[myRole] > ROLE_RANK[p.role];
       const roleLabel = p.role === 'manager' ? 'Управляющий' : (p.role === 'deputy' ? 'Заместитель' : 'Участник');
-      const statusColor = p.online ? '#14ae5c' : '#e5484d';
-      const statusText = p.online ? 'онлайн' : 'оффлайн';
+      const roleClass = p.role;
+      const displayName = p.display_name || p.username;
+      const initial = p.username.charAt(0).toUpperCase();
+      const avatarHtml = `<span>${initial}</span>`;
+      const isOnline = p.online ? 'true' : 'false';
+      
+      let actionsHtml = '';
+      if (canPromote) {
+        actionsHtml += `<button class="member-action-btn btn-promote" data-action="promote" data-user="${p.id}">Повысить</button>`;
+      }
+      if (canDemote) {
+        actionsHtml += `<button class="member-action-btn btn-demote" data-action="demote" data-user="${p.id}">Понизить</button>`;
+      }
+      if (canRemove) {
+        actionsHtml += `<button class="member-action-btn btn-remove" data-action="remove" data-user="${p.id}">Удалить</button>`;
+      }
+      
       return (
-        `<div class="project-row" data-user="${p.id}">
-          <div class="flex-block-projects">
-            <div class="project-avatar" style="background:transparent; width:32px; height:32px; border-radius:50%; border:1px solid var(--border);"></div>
-            <a class="project-name" href="/Profile.html?id=${encodeURIComponent(p.id)}">${p.username}</a>
+        `<div class="member-card" data-user="${p.id}" data-online="${isOnline}">
+          <a href="/Profile?id=${p.id}" class="member-avatar-link">
+            <div class="member-avatar">${avatarHtml}</div>
+          </a>
+          <div class="member-info">
+            <h3 class="member-display-name">${displayName}</h3>
+            <p class="member-username">@${p.username}</p>
+            <span class="member-role ${roleClass}">${roleLabel}</span>
           </div>
-          <div class="project-participants">${roleLabel}</div>
-          <div class="project-action">
-            <span class="status-dot" style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${statusColor}; margin-right:8px;"></span>
-            <span class="status-text">${statusText}</span>
-            ${showKick ? ' <button class="kick-btn" data-action="kick">Кикнуть</button>' : ''}
-          </div>
+          ${actionsHtml ? `<div class="member-actions">${actionsHtml}</div>` : ''}
         </div>`
       );
     }).join('');
   }
 
-  function renderRequests(joins, promos, myRole) {
+  function renderRequests(joins, myRole) {
     const isManager = myRole === 'manager';
     const isDeputy = myRole === 'deputy';
-    // Видимость: заместитель -> только вступление; управляющий -> оба; остальные -> ничего
-    requestBoxes.forEach(box => { box.classList.add('hidden'); });
-    const joinBoxContainer = joinBox ? joinBox.closest('.requests-box') : null;
-    const promoBoxContainer = promotionBox ? promotionBox.closest('.requests-box') : null;
-    if (isDeputy && joinBoxContainer) joinBoxContainer.classList.remove('hidden');
-    if (isManager) {
-      if (joinBoxContainer) joinBoxContainer.classList.remove('hidden');
-      if (promoBoxContainer) promoBoxContainer.classList.remove('hidden');
+    const canSeeRequests = isManager || isDeputy;
+    
+    // Отображаем кнопку заявок только для управляющего и заместителя
+    if (joinRequestsBtn) {
+      joinRequestsBtn.classList.toggle('hidden', !canSeeRequests);
     }
+    
+    // Обновляем счётчик заявок
+    if (joinRequestsBadge) {
+      if (joins.length > 0) {
+        joinRequestsBadge.textContent = joins.length;
+        joinRequestsBadge.classList.remove('hidden');
+      } else {
+        joinRequestsBadge.classList.add('hidden');
+      }
+    }
+    
+    // Рендерим список заявок
     if (joinBox) {
-      joinBox.innerHTML = joins.length ? joins.map(r => (
-        `<div class="request-row" data-req="${r.id}" data-user="${r.user_id}">
-          <div>${r.username}</div>
-          <div>
-            <button class="request-approve" data-action="approve-join" title="Принять">+</button>
-            <button class="request-reject" data-action="reject-join" title="Отклонить">−</button>
-          </div>
-        </div>`
-      )).join('') : '<div class="muted">Нет заявок</div>';
+      joinBox.innerHTML = joins.length ? joins.map(r => {
+        const displayName = r.display_name || r.username;
+        return (
+          `<div class="request-item" data-req="${r.id}" data-user="${r.user_id}">
+            <p class="request-user">${displayName}</p>
+            <p class="request-username">@${r.username}</p>
+            <div class="request-actions">
+              <button class="request-btn btn-accept" data-action="approve-join">Принять</button>
+              <button class="request-btn btn-reject" data-action="reject-join">Отклонить</button>
+            </div>
+          </div>`
+        );
+      }).join('') : '<p class="no-requests">Нет заявок</p>';
     }
-    if (promotionBox) {
-      promotionBox.innerHTML = isManager && promos.length ? promos.map(r => (
-        `<div class="request-row" data-req="${r.id}" data-user="${r.user_id}">
-          <div>${r.username}</div>
-          <div>
-            <button class="request-approve" data-action="approve-promotion" title="Повысить">+</button>
-            <button class="request-reject" data-action="reject-promotion" title="Отклонить">−</button>
-          </div>
-        </div>`
-      )).join('') : '<div class="muted">Нет заявок</div>';
-    }
-    if (requestPromotionBtn) {
-      // Видна только для участников
-      requestPromotionBtn.classList.toggle('hidden', myRole !== 'member');
-    }
+    
+    // Кнопка покинуть проект (скрыта у управляющего)
     if (leaveBtn) {
-      // Скрыта у управляющего
-      leaveBtn.classList.toggle('hidden', myRole === 'manager');
+      leaveBtn.classList.toggle('hidden', myRole === 'manager' || !myRole);
     }
   }
 
@@ -110,68 +128,92 @@
     const participants = await loadParticipants();
     renderMembers(participants, my?.role);
     if (my?.role === 'manager' || my?.role === 'deputy') {
-      const { joinRequests, promotionRequests } = await loadRequests();
-      renderRequests(joinRequests, promotionRequests, my.role);
+      const { joinRequests } = await loadRequests();
+      renderRequests(joinRequests, my.role);
     } else {
-      renderRequests([], [], my?.role || null);
+      renderRequests([], my?.role || null);
     }
   }
+  
+  // Модальное окно заявок
+  joinRequestsBtn?.addEventListener('click', () => {
+    if (joinRequestsModal) joinRequestsModal.hidden = false;
+  });
+  
+  joinRequestsModal?.querySelector('.modal-close')?.addEventListener('click', () => {
+    if (joinRequestsModal) joinRequestsModal.hidden = true;
+  });
+  
+  joinRequestsModal?.addEventListener('click', (e) => {
+    if (e.target === joinRequestsModal) joinRequestsModal.hidden = true;
+  });
 
   document.addEventListener('click', async (e) => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
-    // Кик пользователя
-    if (target.matches('.kick-btn')) {
-      const row = target.closest('.project-row');
-      const userId = row?.getAttribute('data-user');
+    
+    // Повышение участника
+    if (target.matches('[data-action="promote"]')) {
+      const userId = target.getAttribute('data-user');
       if (!userId) return;
+      const res = await fetch(`/api/projects/${encodeURIComponent(id)}/promote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId }) });
+      const out = await res.json();
+      if (out.ok) refresh(); else alert(out.error || 'Ошибка');
+    }
+    
+    // Понижение заместителя
+    if (target.matches('[data-action="demote"]')) {
+      const userId = target.getAttribute('data-user');
+      if (!userId) return;
+      const res = await fetch(`/api/projects/${encodeURIComponent(id)}/demote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId }) });
+      const out = await res.json();
+      if (out.ok) refresh(); else alert(out.error || 'Ошибка');
+    }
+    
+    // Удаление участника
+    if (target.matches('[data-action="remove"]')) {
+      const userId = target.getAttribute('data-user');
+      if (!userId) return;
+      if (!confirm('Вы уверены, что хотите удалить этого участника?')) return;
       const res = await fetch(`/api/projects/${encodeURIComponent(id)}/kick`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId }) });
       const out = await res.json();
       if (out.ok) refresh(); else alert(out.error || 'Ошибка');
     }
-    // Одобрение заявок
+    
+    // Обработка заявок на вступление
     if (target.matches('[data-action="approve-join"]')) {
-      const row = target.closest('.request-row');
-      const reqId = row?.getAttribute('data-req');
+      const item = target.closest('.request-item');
+      const reqId = item?.getAttribute('data-req');
       if (!reqId) return;
       const res = await fetch(`/api/projects/${encodeURIComponent(id)}/requests/${encodeURIComponent(reqId)}/approve-join`, { method: 'POST' });
       const out = await res.json();
-      if (out.ok) refresh(); else alert(out.error || 'Ошибка');
+      if (out.ok) {
+        await refresh();
+        // Закрываем модальное окно если нет больше заявок
+        const joinRequests = await loadRequests().then(r => r.joinRequests || []);
+        if (joinRequests.length === 0 && joinRequestsModal) {
+          joinRequestsModal.hidden = true;
+        }
+      } else {
+        alert(out.error || 'Ошибка');
+      }
     }
     if (target.matches('[data-action="reject-join"]')) {
-      const row = target.closest('.request-row');
-      const reqId = row?.getAttribute('data-req');
+      const item = target.closest('.request-item');
+      const reqId = item?.getAttribute('data-req');
       if (!reqId) return;
       const res = await fetch(`/api/projects/${encodeURIComponent(id)}/requests/${encodeURIComponent(reqId)}/reject-join`, { method: 'POST' });
       const out = await res.json();
-      if (out.ok) refresh(); else alert(out.error || 'Ошибка');
-    }
-    if (target.matches('[data-action="approve-promotion"]')) {
-      const row = target.closest('.request-row');
-      const reqId = row?.getAttribute('data-req');
-      if (!reqId) return;
-      const res = await fetch(`/api/projects/${encodeURIComponent(id)}/requests/${encodeURIComponent(reqId)}/approve-promotion`, { method: 'POST' });
-      const out = await res.json();
-      if (out.ok) refresh(); else alert(out.error || 'Ошибка');
-    }
-    if (target.matches('[data-action="reject-promotion"]')) {
-      const row = target.closest('.request-row');
-      const reqId = row?.getAttribute('data-req');
-      if (!reqId) return;
-      const res = await fetch(`/api/projects/${encodeURIComponent(id)}/requests/${encodeURIComponent(reqId)}/reject-promotion`, { method: 'POST' });
-      const out = await res.json();
-      if (out.ok) refresh(); else alert(out.error || 'Ошибка');
-    }
-  });
-
-  requestPromotionBtn?.addEventListener('click', async () => {
-    const res = await fetch(`/api/projects/${encodeURIComponent(id)}/request-promotion`, { method: 'POST' });
-    const out = await res.json();
-    if (out.ok) {
-      requestPromotionBtn.classList.add('hidden');
-      refresh();
-    } else {
-      alert(out.error || 'Ошибка');
+      if (out.ok) {
+        await refresh();
+        // Закрываем модальное окно если нет больше заявок
+        const joinRequests = await loadRequests().then(r => r.joinRequests || []);
+        if (joinRequests.length === 0 && joinRequestsModal) {
+          joinRequestsModal.hidden = true;
+        }
+      } else {
+        alert(out.error || 'Ошибка');
+      }
     }
   });
 

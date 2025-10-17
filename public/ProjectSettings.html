@@ -11,6 +11,11 @@
 </head>
 <body data-page="project-settings">
   <nav class="navbar">
+    <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Меню">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <div class="nav-left">
       <a href="/">Главная</a>
       <a href="/MyProjects">Мои проекты</a>
@@ -19,6 +24,14 @@
       <button class="theme-toggle" type="button" aria-label="Сменить тему"></button>
       <a href="/Profile" class="profile-link hidden" id="profile-link">Профиль</a>
       <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
+    </div>
+    <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dropdown-content">
+        <a href="/">Главная</a>
+        <a href="/MyProjects">Мои проекты</a>
+        <a href="/Profile" class="profile-link-mobile hidden">Профиль</a>
+        <button class="auth-open-mobile" type="button">Войти/Регистрация</button>
+      </div>
     </div>
   </nav>
   <main class="container project-layout">
@@ -34,10 +47,107 @@
     </aside>
     <section class="project-content">
       <h1>Настройки проекта</h1>
+      
+      <div class="settings-container">
+        <form id="project-settings-form" class="settings-form">
+          <div class="form-group">
+            <label for="project-name">Название проекта</label>
+            <input type="text" id="project-name" name="name" required placeholder="Введите название проекта">
+          </div>
+
+          <div class="form-group">
+            <label for="project-topic">Тема проекта</label>
+            <input type="text" id="project-topic" name="topic" placeholder="Введите тему проекта">
+          </div>
+
+          <div class="form-group">
+            <label for="project-type">Тип проекта</label>
+            <input type="text" id="project-type" name="projectType" placeholder="Например: Веб-приложение, Мобильное приложение">
+          </div>
+
+          <div class="form-group">
+            <label for="project-model">Модель разработки</label>
+            <select id="project-model" name="model">
+              <option value="">Не выбрана</option>
+              <option value="Каскадная">Каскадная (Waterfall)</option>
+              <option value="V-образная">V-образная модель</option>
+              <option value="Спиральная">Спиральная</option>
+              <option value="Итеративная">Итеративная</option>
+              <option value="Другая">Другая</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Аватар проекта</label>
+            <div class="avatar-selector" id="avatar-selector">
+              <div class="avatar-option" data-avatar="/img/icon_avatar_1.svg">
+                <img src="/img/icon_avatar_1.svg" alt="Аватар 1">
+              </div>
+              <div class="avatar-option" data-avatar="/img/icon_avatar_2.svg">
+                <img src="/img/icon_avatar_2.svg" alt="Аватар 2">
+              </div>
+              <div class="avatar-option" data-avatar="/img/icon_avatar_3.svg">
+                <img src="/img/icon_avatar_3.svg" alt="Аватар 3">
+              </div>
+              <div class="avatar-option" data-avatar="/img/icon_avatar_4.svg">
+                <img src="/img/icon_avatar_4.svg" alt="Аватар 4">
+              </div>
+              <div class="avatar-option" data-avatar="/img/icon_avatar_5.svg">
+                <img src="/img/icon_avatar_5.svg" alt="Аватар 5">
+              </div>
+              <div class="avatar-option" data-avatar="/img/icon_avatar_6.svg">
+                <img src="/img/icon_avatar_6.svg" alt="Аватар 6">
+              </div>
+            </div>
+            <input type="hidden" id="project-avatar" name="avatarUrl" value="/img/icon_avatar_1.svg">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Сохранить изменения</button>
+          </div>
+        </form>
+
+        <div class="danger-zone">
+          <h2>Опасная зона</h2>
+          <p>Удаление проекта необратимо. Все данные проекта будут потеряны.</p>
+          <button type="button" id="delete-project-btn" class="btn-danger">Удалить проект</button>
+        </div>
+      </div>
     </section>
   </main>
+
+  <!-- Модальное окно подтверждения удаления -->
+  <div id="delete-confirm-modal" class="modal" hidden>
+    <div class="modal-content delete-confirm-dialog">
+      <button class="modal-close" type="button">&times;</button>
+      <h2>Подтверждение удаления</h2>
+      <p>Вы уверены, что хотите удалить этот проект? Это действие необратимо.</p>
+      <p>Введите название проекта для подтверждения:</p>
+      <input type="text" id="delete-confirm-input" class="delete-confirm-input" placeholder="Название проекта">
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="delete-cancel-btn">Отмена</button>
+        <button type="button" class="btn-danger" id="delete-confirm-btn">Удалить проект</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile project navigation -->
+  <button class="project-nav-toggle" id="project-nav-toggle" type="button" aria-label="Навигация проекта">☰</button>
+  <div class="project-nav-mobile" id="project-nav-mobile">
+    <div class="project-nav-mobile-content">
+      <a href="/Project.html" class="project-nav-link">Главная</a>
+      <a href="/ProjectTasks.html" class="project-nav-link">Задачи</a>
+      <a href="/ProjectFiles.html" class="project-nav-link">Файлы</a>
+      <a href="/ProjectStages.html" class="project-nav-link">Этапы</a>
+      <a href="/ProjectMembers.html" class="project-nav-link">Участники</a>
+      <a href="/ProjectSettings.html" class="project-nav-link active only-manager" hidden>Настройки проекта</a>
+    </div>
+  </div>
+
   <script src="/js/main.js" defer></script>
   <script src="/js/project.js" defer></script>
+  <script src="/js/project-settings.js" defer></script>
+  <script src="/js/project-nav-mobile.js" defer></script>
 </body>
 </html>
 

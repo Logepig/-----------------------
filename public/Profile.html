@@ -10,6 +10,11 @@
 </head>
 <body data-page="profile">
   <nav class="navbar">
+    <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Меню">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <div class="nav-left">
       <a href="/">Главная</a>
       <a href="/MyProjects">Мои проекты</a>
@@ -19,32 +24,65 @@
       <a href="/Profile" class="active profile-link hidden" id="profile-link">Профиль</a>
       <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
     </div>
+    <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dropdown-content">
+        <a href="/">Главная</a>
+        <a href="/MyProjects">Мои проекты</a>
+        <a href="/Profile" class="active profile-link-mobile hidden">Профиль</a>
+        <button class="auth-open-mobile" type="button">Войти/Регистрация</button>
+      </div>
+    </div>
   </nav>
-  <div class="under-nav">
-    <button class="logout hidden" id="logout-btn" type="button">Выйти</button>
-  </div>
+  <main class="container profile-container">
+    <div class="profile-header">
+      <h1>Профиль</h1>
+      <button class="btn-logout hidden" id="logout-btn" type="button">
+        <span>Выйти</span>
+      </button>
+    </div>
 
-  <main class="container">
-    <h1>Профиль</h1>
-    <p class="profile-info">Информация профиля появится после авторизации.</p>
+    <div class="profile-card" id="profile-card">
+      <div class="profile-avatar">
+        <img id="profile-avatar-img" src="" alt="Аватар" class="avatar-image hidden">
+        <div class="avatar-circle" id="avatar-circle">
+          <span id="avatar-initial">?</span>
+        </div>
+      </div>
+      <div class="profile-details">
+        <h2 id="profile-display-name">Гость</h2>
+        <p class="profile-username-small" id="profile-username">@username</p>
+        <p class="profile-info" id="profile-info">Информация профиля появится после авторизации.</p>
+      </div>
+    </div>
+
     <section class="profile-edit hidden" id="profile-edit">
-      <form id="profile-form">
-        <div class="field">
-          <span class="field-label" id="email-current">email</span>
-          <input type="email" name="email" placeholder="Новый email" />
+      <h3>Редактировать профиль</h3>
+      <form id="profile-form" class="profile-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="profile-display-name-input">Псевдоним (отображаемое имя)</label>
+            <input type="text" id="profile-display-name-input" name="displayName" placeholder="Как вас будут видеть другие" />
+            <small>Это имя будет отображаться другим пользователям. Имя для входа: <strong id="username-login">username</strong></small>
+          </div>
         </div>
-        <div class="field">
-          <span class="field-label" id="phone-current">phone</span>
-          <input type="text" name="phone" placeholder="Новый номер телефона" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="profile-email">Email</label>
+            <input type="email" id="profile-email" name="email" placeholder="Email" />
+          </div>
         </div>
-        <div class="field">
-          <span class="field-label">пароль</span>
-          <input type="password" name="password" placeholder="Новый пароль" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="profile-phone">Телефон</label>
+            <input type="text" id="profile-phone" name="phone" placeholder="Номер телефона (с +)" />
+          </div>
         </div>
-        <button type="submit">Сменить</button>
+
+        <button type="submit" class="btn-submit">Сохранить изменения</button>
       </form>
     </section>
-    
   </main>
 
   <div class="modal" id="auth-modal" hidden>

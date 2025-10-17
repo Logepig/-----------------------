@@ -11,6 +11,11 @@
 </head>
 <body data-page="project-tasks">
   <nav class="navbar">
+    <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Меню">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <div class="nav-left">
       <a href="/">Главная</a>
       <a href="/MyProjects">Мои проекты</a>
@@ -19,6 +24,14 @@
       <button class="theme-toggle" type="button" aria-label="Сменить тему"></button>
       <a href="/Profile" class="profile-link hidden" id="profile-link">Профиль</a>
       <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
+    </div>
+    <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dropdown-content">
+        <a href="/">Главная</a>
+        <a href="/MyProjects">Мои проекты</a>
+        <a href="/Profile" class="profile-link-mobile hidden">Профиль</a>
+        <button class="auth-open-mobile" type="button">Войти/Регистрация</button>
+      </div>
     </div>
   </nav>
   <main class="container project-layout">
@@ -33,12 +46,127 @@
       </nav>
     </aside>
     <section class="project-content">
-      <h1>Задачи</h1>
+      <div class="files-header">
+        <h1>Задачи</h1>
+        <div class="files-controls">
+          <select class="sort-select" id="sort-tasks">
+            <option value="new">Сначала новые</option>
+            <option value="old">Сначала старые</option>
+          </select>
+          <button id="add-task-btn" class="btn-primary hidden">+ Добавить задачу</button>
+        </div>
+      </div>
+      <div class="files-list" id="tasks-list"></div>
     </section>
   </main>
+
+  <!-- Модальное окно добавления задачи -->
+  <div id="add-task-modal" class="modal" hidden>
+    <div class="modal-content files-modal">
+      <button class="modal-close" type="button">&times;</button>
+      <h2>Добавить задачу</h2>
+      <form id="add-task-form" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="task-title">Название задачи</label>
+          <input type="text" id="task-title" name="title" required placeholder="Введите название">
+        </div>
+        <div class="form-group">
+          <label for="task-description">Описание задачи</label>
+          <textarea id="task-description" name="description" rows="4" placeholder="Введите описание задачи"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="task-files">Файлы (необязательно)</label>
+          <input type="file" id="task-files" name="files" multiple>
+          <div class="files-preview" id="task-files-preview"></div>
+        </div>
+        <button type="submit" class="btn-primary">Создать задачу</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно добавления файлов к задаче -->
+  <div id="add-files-to-task-modal" class="modal" hidden>
+    <div class="modal-content files-modal">
+      <button class="modal-close" type="button">&times;</button>
+      <h2>Добавить файлы к задаче</h2>
+      <form id="add-files-to-task-form" enctype="multipart/form-data">
+        <input type="hidden" id="target-task-id" name="taskId">
+        <div class="form-group">
+          <label for="additional-task-files">Выберите файлы</label>
+          <input type="file" id="additional-task-files" name="files" multiple required>
+          <div class="files-preview" id="additional-files-preview"></div>
+        </div>
+        <button type="submit" class="btn-primary">Добавить файлы</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно авторизации -->
+  <div class="modal" id="auth-modal" hidden>
+    <div class="modal-content auth-modal">
+      <button class="modal-close" type="button" aria-label="Закрыть">×</button>
+      <div class="auth-header">
+        <h2>Добро пожаловать</h2>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Вход</button>
+        <button class="auth-tab" data-tab="register">Регистрация</button>
+      </div>
+      <div class="auth-content">
+        <div class="auth-form-container" data-tab="login">
+          <form id="login-form" class="auth-form">
+            <div class="form-field">
+              <label for="login-username">Имя пользователя</label>
+              <input type="text" id="login-username" name="username" required placeholder="Введите имя пользователя">
+            </div>
+            <div class="form-field">
+              <label for="login-password">Пароль</label>
+              <input type="password" id="login-password" name="password" required placeholder="Введите пароль">
+            </div>
+            <button type="submit" class="btn-auth">Войти</button>
+          </form>
+        </div>
+        <div class="auth-form-container" data-tab="register" hidden>
+          <form id="register-form" class="auth-form">
+            <div class="form-field">
+              <label for="register-username">Имя пользователя</label>
+              <input type="text" id="register-username" name="username" required placeholder="Выберите имя пользователя">
+            </div>
+            <div class="form-field">
+              <label for="register-password">Пароль</label>
+              <input type="password" id="register-password" name="password" required placeholder="Создайте пароль">
+            </div>
+            <div class="form-field">
+              <label for="register-phone">Телефон</label>
+              <input type="text" id="register-phone" name="phone" required placeholder="+7 (xxx) xxx-xx-xx">
+            </div>
+            <div class="form-field">
+              <label for="register-email">Email</label>
+              <input type="email" id="register-email" name="email" required placeholder="your@email.com">
+            </div>
+            <button type="submit" class="btn-auth">Зарегистрироваться</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile project navigation -->
+  <button class="project-nav-toggle" id="project-nav-toggle" type="button" aria-label="Навигация проекта">☰</button>
+  <div class="project-nav-mobile" id="project-nav-mobile">
+    <div class="project-nav-mobile-content">
+      <a href="/Project.html" class="project-nav-link">Главная</a>
+      <a href="/ProjectTasks.html" class="project-nav-link active">Задачи</a>
+      <a href="/ProjectFiles.html" class="project-nav-link">Файлы</a>
+      <a href="/ProjectStages.html" class="project-nav-link">Этапы</a>
+      <a href="/ProjectMembers.html" class="project-nav-link">Участники</a>
+      <a href="/ProjectSettings.html" class="project-nav-link only-manager" hidden>Настройки проекта</a>
+    </div>
+  </div>
+
   <script src="/js/main.js" defer></script>
   <script src="/js/project.js" defer></script>
+  <script src="/js/project-tasks.js" defer></script>
+  <script src="/js/project-nav-mobile.js" defer></script>
 </body>
 </html>
-
-

@@ -11,6 +11,11 @@
 </head>
 <body data-page="project-stages">
   <nav class="navbar">
+    <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Меню">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <div class="nav-left">
       <a href="/">Главная</a>
       <a href="/MyProjects">Мои проекты</a>
@@ -19,6 +24,14 @@
       <button class="theme-toggle" type="button" aria-label="Сменить тему"></button>
       <a href="/Profile" class="profile-link hidden" id="profile-link">Профиль</a>
       <button class="auth-open" type="button" id="auth-open">Войти/Регистрация</button>
+    </div>
+    <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dropdown-content">
+        <a href="/">Главная</a>
+        <a href="/MyProjects">Мои проекты</a>
+        <a href="/Profile" class="profile-link-mobile hidden">Профиль</a>
+        <button class="auth-open-mobile" type="button">Войти/Регистрация</button>
+      </div>
     </div>
   </nav>
   <main class="container project-layout">
@@ -34,8 +47,8 @@
     </aside>
     <section class="project-content">
       <h1>Этапы</h1>
-      <div id="stages-canvas" class="model-view" style="height:360px;border:1px solid var(--border); border-radius:8px;" hidden></div>
-      <div class="stages-controls" id="stages-controls" hidden>
+      <div id="stages-canvas" class="model-view" style="height:360px;border:1px solid var(--border); border-radius:8px;"></div>
+      <div class="stages-controls" id="stages-controls">
         <button class="circle-btn blue" id="add-stage-open" title="Добавить этап">+</button>
         <button class="circle-btn blue" id="edit-stage-open" title="Изменить этап">~</button>
         <button class="circle-btn blue" id="delete-stage-open" title="Удалить этап">-</button>
@@ -43,20 +56,20 @@
 
       <!-- Modals -->
       <div class="modal" id="add-stage-modal" hidden>
-        <div class="modal-dialog">
+        <div class="modal-content stage-modal">
           <button class="modal-close" type="button" aria-label="Закрыть">×</button>
           <h3>Добавить этап</h3>
           <form id="add-stage-form">
             <label>Название этапа
-              <input name="name" required placeholder="Название" />
+              <input name="name" required placeholder="Например: Разработка API" />
             </label>
-            <button type="submit">Сохранить</button>
+            <button type="submit" class="btn-submit-modal">Сохранить</button>
           </form>
         </div>
       </div>
 
       <div class="modal" id="edit-stage-modal" hidden>
-        <div class="modal-dialog">
+        <div class="modal-content stage-modal">
           <button class="modal-close" type="button" aria-label="Закрыть">×</button>
           <h3>Изменить этап</h3>
           <form id="edit-stage-form">
@@ -64,30 +77,44 @@
               <select name="stageId" id="edit-stage-select" required></select>
             </label>
             <label>Новое название
-              <input name="newName" required placeholder="Новое название" />
+              <input name="newName" required placeholder="Введите новое название" />
             </label>
-            <button type="submit">Сохранить</button>
+            <button type="submit" class="btn-submit-modal">Сохранить</button>
           </form>
         </div>
       </div>
 
       <div class="modal" id="delete-stage-modal" hidden>
-        <div class="modal-dialog">
+        <div class="modal-content stage-modal">
           <button class="modal-close" type="button" aria-label="Закрыть">×</button>
           <h3>Удалить этап</h3>
           <form id="delete-stage-form">
-            <label>Этап
+            <label>Выберите этап для удаления
               <select name="stageId" id="delete-stage-select" required></select>
             </label>
-            <button type="submit">Удалить</button>
+            <button type="submit" class="btn-delete-modal">Удалить</button>
           </form>
         </div>
       </div>
     </section>
   </main>
+  <!-- Mobile project navigation -->
+  <button class="project-nav-toggle" id="project-nav-toggle" type="button" aria-label="Навигация проекта">☰</button>
+  <div class="project-nav-mobile" id="project-nav-mobile">
+    <div class="project-nav-mobile-content">
+      <a href="/Project.html" class="project-nav-link">Главная</a>
+      <a href="/ProjectTasks.html" class="project-nav-link">Задачи</a>
+      <a href="/ProjectFiles.html" class="project-nav-link">Файлы</a>
+      <a href="/ProjectStages.html" class="project-nav-link active">Этапы</a>
+      <a href="/ProjectMembers.html" class="project-nav-link">Участники</a>
+      <a href="/ProjectSettings.html" class="project-nav-link only-manager" hidden>Настройки проекта</a>
+    </div>
+  </div>
+
   <script src="/js/main.js" defer></script>
   <script src="/js/project.js" defer></script>
   <script src="/js/project-stages.js" defer></script>
+  <script src="/js/project-nav-mobile.js" defer></script>
 </body>
 </html>
 

@@ -85,7 +85,40 @@
           } catch {}
         });
       }
-      if (me?.membership?.role === 'manager' && settingsLink) settingsLink.hidden = false;
+      
+      // Обновляем ссылки в мобильной навигации
+      if (isMember) {
+        const mobileNav = document.querySelector('.project-nav-mobile');
+        if (mobileNav) {
+          const mobileLinks = mobileNav.querySelectorAll('.project-nav-link');
+          mobileLinks.forEach((a) => {
+            try {
+              const url = new URL(a.getAttribute('href'), window.location.origin);
+              url.searchParams.set('id', id);
+              a.setAttribute('href', url.pathname + '?' + url.searchParams.toString());
+            } catch {}
+          });
+        }
+      }
+      
+      // Показываем ссылку на настройки только управляющему
+      if (settingsLink) {
+        if (me?.membership?.role === 'manager') {
+          settingsLink.hidden = false;
+        } else {
+          settingsLink.hidden = true;
+        }
+      }
+      
+      // Также обновляем ссылку настроек в мобильной навигации
+      const mobileSettingsLink = document.querySelector('.project-nav-mobile .only-manager');
+      if (mobileSettingsLink) {
+        if (me?.membership?.role === 'manager') {
+          mobileSettingsLink.hidden = false;
+        } else {
+          mobileSettingsLink.hidden = true;
+        }
+      }
     } catch {}
   }
 
@@ -123,33 +156,53 @@
 
   function buildBase(width, height) {
     const svg = svgEl('svg', { viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: 'xMidYMid meet' });
+    svg.style.overflow = 'visible';
     const defs = svgEl('defs');
     const marker = svgEl('marker', { id: 'arrow', viewBox: '0 0 10 10', refX: 6, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' });
-    marker.appendChild(svgEl('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: 'currentColor' }));
+    const arrowPath = svgEl('path', { d: 'M 0 0 L 10 5 L 0 10 z' });
+    arrowPath.style.fill = 'var(--primary)';
+    arrowPath.style.opacity = '0.6';
+    marker.appendChild(arrowPath);
     defs.appendChild(marker);
     svg.appendChild(defs);
     return svg;
   }
 
   function label(svg, x, y, text) {
-    const t = svgEl('text', { x, y, class: 'model-label' });
+    const t = svgEl('text', { x, y, class: 'model-label', 'text-anchor': 'middle', 'dominant-baseline': 'middle' });
     t.textContent = text;
     svg.appendChild(t);
   }
 
   function buildWaterfall({ clickable = false } = {}) {
-    const svg = buildBase(900, 320);
-    const steps = ['Требования','Проектирование','Реализация','Тестирование','Ввод в эксплуатацию'];
-    const w = 160, h = 64, gap = 24, drop = 30;
+    const svg = buildBase(900, 400);
+    const steps = ['Требования','Проектирование','Реализация','Тестирование','Развертывание'];
+    const w = 145, h = 55, gap = 25, drop = 45;
+    const startX = 50;
+    const startY = 35;
+    
     steps.forEach((s, i) => {
-      const x = 40 + i * (w + gap);
-      const y = 20 + i * drop;
-      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 10, ry: 10, class: 'model-node' });
+      const x = startX + i * (w + gap);
+      const y = startY + i * drop;
+      
+      // Градиентный эффект через несколько прямоугольников
+      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 12, ry: 12, class: 'model-node' });
       svg.appendChild(rect);
-      label(svg, x + 12, y + h/2 + 4, s);
+      label(svg, x + w/2, y + h/2, s);
+      
       if (i < steps.length - 1) {
-        const ax = x + w; const ay = y + h/2; const bx = x + w + gap - 8; const by = y + drop + h/2;
-        const path = svgEl('path', { d: `M ${ax} ${ay} C ${ax+18} ${ay}, ${bx-18} ${by}, ${bx} ${by}`, class: 'model-arrow' });
+        const ax = x + w; 
+        const ay = y + h/2; 
+        const bx = x + w + gap; 
+        const by = y + drop + h/2;
+        const midX = (ax + bx) / 2;
+        
+        // Плавная кривая вниз
+        const path = svgEl('path', { 
+          d: `M ${ax} ${ay} C ${midX} ${ay}, ${midX} ${by}, ${bx} ${by}`, 
+          class: 'model-arrow',
+          style: 'stroke-width: 2.5;'
+        });
         svg.appendChild(path);
       }
       if (clickable) rect.classList.add('clickable');
@@ -158,31 +211,82 @@
   }
 
   function buildVModel({ clickable = false } = {}) {
-    const svg = buildBase(900, 360);
-    const left = ['Требования','Проектирование','Дизайн'];
-    const right = ['Верификация','Тестирование','Валидация'];
-    const w = 160, h = 56, gap = 32, drop = 42;
+    const svg = buildBase(900, 420);
+    const left = ['Требования','Архитектура','Модульный\nдизайн'];
+    const right = ['Приемочное\nтестирование','Системное\nтестирование','Модульное\nтестирование'];
+    const w = 135, h = 52, drop = 65;
+    const leftStartX = 60;
+    const rightStartX = 705;
+    const startY = 40;
+    
+    // Левая сторона V (вниз)
     left.forEach((s, i) => {
-      const x = 40 + i * (w/2 + 10); const y = 20 + i * drop;
-      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 10, ry: 10, class: 'model-node' });
-      svg.appendChild(rect); label(svg, x + 12, y + h/2 + 4, s);
-      if (i < left.length - 1) svg.appendChild(svgEl('path', { d: `M ${x+w} ${y+h/2} C ${x+w+18} ${y+h/2}, ${x+w/2+gap-18} ${y+drop+h/2}, ${x+w/2+gap} ${y+drop+h/2}`, class: 'model-arrow' }));
+      const x = leftStartX + i * 45;
+      const y = startY + i * drop;
+      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 12, ry: 12, class: 'model-node' });
+      svg.appendChild(rect); 
+      label(svg, x + w/2, y + h/2, s.replace('\\n', ' '));
+      
+      if (i < left.length - 1) {
+        const ax = x + w; 
+        const ay = y + h/2;
+        const bx = leftStartX + (i+1) * 45;
+        const by = startY + (i+1) * drop + h/2;
+        svg.appendChild(svgEl('path', { 
+          d: `M ${ax} ${ay} L ${bx} ${by}`, 
+          class: 'model-arrow',
+          style: 'stroke-width: 2.5;'
+        }));
+      }
       if (clickable) rect.classList.add('clickable');
     });
+    
+    // Правая сторона V (вверх)
     right.forEach((s, i) => {
-      const x = 900 - 40 - (i+1)*w + i*(w/2 + 10); const y = 20 + i * drop;
-      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 10, ry: 10, class: 'model-node' });
-      svg.appendChild(rect); label(svg, x + 12, y + h/2 + 4, s);
-      if (i < right.length - 1) svg.appendChild(svgEl('path', { d: `M ${x} ${y+h/2} C ${x-18} ${y+h/2}, ${x - w/2 - gap + 18} ${y+drop+h/2}, ${x - w/2 - gap} ${y+drop+h/2}`, class: 'model-arrow' }));
+      const x = rightStartX - i * 45;
+      const y = startY + i * drop;
+      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 12, ry: 12, class: 'model-node' });
+      svg.appendChild(rect); 
+      label(svg, x + w/2, y + h/2, s.replace('\\n', ' '));
+      
+      if (i < right.length - 1) {
+        const ax = x;
+        const ay = y + h/2;
+        const bx = rightStartX - (i+1) * 45 + w;
+        const by = startY + (i+1) * drop + h/2;
+        svg.appendChild(svgEl('path', { 
+          d: `M ${ax} ${ay} L ${bx} ${by}`, 
+          class: 'model-arrow',
+          style: 'stroke-width: 2.5;'
+        }));
+      }
       if (clickable) rect.classList.add('clickable');
     });
-    // Нижняя фаза кодирования
-    const cx = 900/2 - 80; const cy = Math.max(left.length, right.length) * drop + 80;
-    const code = svgEl('rect', { x: cx, y: cy, width: 160, height: 58, rx: 10, ry: 10, class: 'model-node' });
-    svg.appendChild(code); label(svg, cx + 12, cy + 34, 'Реализация');
-    // Соединяем диагонали с нижней частью
-    svg.appendChild(svgEl('path', { d: `M ${left.length*(w/2)+w/2+gap + 40} ${(left.length-1)*drop + h/2 + 20} C ${left.length*(w/2)+w/2+gap + 60} ${(left.length-1)*drop + h/2 + 20}, ${cx-20} ${cy+h/2}, ${cx} ${cy+h/2}`, class: 'model-arrow' }));
-    svg.appendChild(svgEl('path', { d: `M ${900 - 40 - right.length*w + (right.length-1)*(w/2)} ${(right.length-1)*drop + h/2 + 20} C ${900 - 40 - right.length*w + (right.length-1)*(w/2) - 60} ${(right.length-1)*drop + h/2 + 20}, ${cx+180} ${cy+h/2}, ${cx+160} ${cy+h/2}`, class: 'model-arrow' }));
+    
+    // Нижняя фаза - Реализация
+    const cx = 450 - 67.5;
+    const cy = startY + left.length * drop + 15;
+    const code = svgEl('rect', { x: cx, y: cy, width: 135, height: 52, rx: 12, ry: 12, class: 'model-node' });
+    svg.appendChild(code); 
+    label(svg, cx + 67.5, cy + 26, 'Реализация');
+    
+    // Соединения с нижней частью
+    const leftLastX = leftStartX + (left.length-1) * 45 + w;
+    const leftLastY = startY + (left.length-1) * drop + h/2;
+    svg.appendChild(svgEl('path', { 
+      d: `M ${leftLastX} ${leftLastY} L ${cx} ${cy + h/2}`, 
+      class: 'model-arrow',
+      style: 'stroke-width: 2.5;'
+    }));
+    
+    const rightLastX = rightStartX - (right.length-1) * 45;
+    const rightLastY = startY + (right.length-1) * drop + h/2;
+    svg.appendChild(svgEl('path', { 
+      d: `M ${cx + 135} ${cy + h/2} L ${rightLastX} ${rightLastY}`, 
+      class: 'model-arrow',
+      style: 'stroke-width: 2.5;'
+    }));
+    
     if (clickable) code.classList.add('clickable');
     return svg;
   }
@@ -190,66 +294,126 @@
   function buildSpiral({ clickable = false } = {}) {
     const svg = buildBase(900, 420);
     const centerX = 450, centerY = 210;
-    const turns = 3; const points = 260; const maxR = 150;
+    const turns = 3; 
+    const points = 250; 
+    const maxR = 150;
+    
+    // Рисуем спираль
     let d = '';
     for (let i = 0; i <= points; i++) {
       const t = (i / points) * (Math.PI * 2 * turns);
       const r = (i / points) * maxR;
-      const x = centerX + r * Math.cos(t);
-      const y = centerY + r * Math.sin(t);
+      const x = centerX + r * Math.cos(t - Math.PI/2);
+      const y = centerY + r * Math.sin(t - Math.PI/2);
       d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
     }
-    svg.appendChild(svgEl('path', { d, class: 'model-arrow' }));
-    // Вехи
-    const labels = ['Планирование','Риски','Разработка','Тесты'];
+    svg.appendChild(svgEl('path', { 
+      d, 
+      class: 'model-arrow', 
+      style: 'stroke-width: 3; opacity: 0.6; fill: none;' 
+    }));
+    
+    // Этапы на спирали
+    const labels = ['Планирование','Оценка рисков','Разработка','Тестирование'];
     labels.forEach((s, i) => {
-      const t = (i / (labels.length-1)) * (Math.PI * 2 * (turns-0.2));
-      const r = (i / (labels.length-1)) * maxR;
-      const x = centerX + r * Math.cos(t);
-      const y = centerY + r * Math.sin(t);
-      const rect = svgEl('rect', { x: x-70, y: y-22, width: 140, height: 44, rx: 10, ry: 10, class: 'model-node' });
-      svg.appendChild(rect); label(svg, x-56, y+6, s);
+      const progress = (i + 0.5) / labels.length;
+      const angle = progress * (Math.PI * 2 * turns) - Math.PI/2;
+      const r = progress * maxR;
+      const x = centerX + r * Math.cos(angle);
+      const y = centerY + r * Math.sin(angle);
+      
+      const rect = svgEl('rect', { 
+        x: x-62, 
+        y: y-24, 
+        width: 124, 
+        height: 48, 
+        rx: 12, 
+        ry: 12, 
+        class: 'model-node' 
+      });
+      svg.appendChild(rect); 
+      label(svg, x, y, s);
       if (clickable) rect.classList.add('clickable');
     });
+    
     return svg;
   }
 
   function buildIterative({ clickable = false } = {}) {
-    const svg = buildBase(900, 300);
+    const svg = buildBase(900, 340);
     const cycles = ['Итерация 1','Итерация 2','Итерация 3','Итерация 4'];
-    const w = 170, h = 64, gap = 24;
+    const w = 155, h = 58, gap = 32;
+    const startX = 70;
+    const startY = 110;
+    
     cycles.forEach((s, i) => {
-      const x = 40 + i * (w + gap), y = 90;
-      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 8, ry: 8, class: 'model-node' });
-      svg.appendChild(rect); label(svg, x + 20, y + 36, s);
-      // Петля обратной связи
-      const arc = svgEl('path', { d: `M ${x+w-6} ${y-4} C ${x+w+24} ${y-38}, ${x+w+24} ${y-38}, ${x+w-6} ${y-38}`, class: 'model-arrow' });
+      const x = startX + i * (w + gap);
+      const y = startY;
+      
+      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 12, ry: 12, class: 'model-node' });
+      svg.appendChild(rect); 
+      label(svg, x + w/2, y + h/2, s);
+      
+      // Петля обратной связи (дуга сверху)
+      const loopTop = y - 45;
+      const loopMid = x + w/2;
+      const loopPath = `M ${x + w - 12} ${y} 
+                        C ${x + w + 12} ${y - 18}, ${x + w + 12} ${loopTop + 8}, ${loopMid} ${loopTop}
+                        C ${x - 12} ${loopTop + 8}, ${x - 12} ${y - 18}, ${x + 12} ${y}`;
+      const arc = svgEl('path', { 
+        d: loopPath, 
+        class: 'model-arrow', 
+        style: 'fill: none; stroke-width: 2.5;' 
+      });
       svg.appendChild(arc);
-      if (i < cycles.length - 1) svg.appendChild(svgEl('path', { d: `M ${x+w} ${y+h/2} C ${x+w+12} ${y+h/2}, ${x+w+gap-12} ${y+h/2}, ${x+w+gap} ${y+h/2}`, class: 'model-arrow' }));
+      
+      // Стрелка вперед к следующей итерации
+      if (i < cycles.length - 1) {
+        const forwardPath = `M ${x + w} ${y + h/2} L ${x + w + gap} ${y + h/2}`;
+        svg.appendChild(svgEl('path', { 
+          d: forwardPath, 
+          class: 'model-arrow',
+          style: 'stroke-width: 2.5;'
+        }));
+      }
+      
       if (clickable) rect.classList.add('clickable');
     });
+    
     return svg;
   }
 
   function buildSimpleStages({ clickable = false, stages = [] } = {}) {
     const list = stages.length ? stages.map(s => s.name) : ['Этап 1','Этап 2','Этап 3','Этап 4','Этап 5','Этап 6'];
-    const perRow = 6; const rows = Math.ceil(list.length / perRow);
-    const w = 120, h = 44, gap = 14; const top = 50; const height = top + rows * (h + 18) + 20; const width = 860;
+    const perRow = 6; 
+    const rows = Math.ceil(list.length / perRow);
+    const w = 130, h = 50, gap = 16; 
+    const top = 40; 
+    const height = top + rows * (h + 20) + 20; 
+    const width = 900;
     const svg = buildBase(width, Math.max(180, height));
+    
     list.forEach((s, i) => {
       const row = Math.floor(i / perRow);
       const inRowIndex = i % perRow;
-      const reversedIndex = (row % 2 === 1) ? (perRow - 1 - inRowIndex) : inRowIndex;
-      const x = reversedIndex * (w + gap);
-      const y = top + row * (h + 18);
-      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 8, ry: 8, class: 'model-node' });
-      svg.appendChild(rect); label(svg, x + 18, y + 28, s);
-      // Стрелки внутри ряда (учитываем обратный порядок визуально)
+      // Всегда слева направо
+      const x = 20 + inRowIndex * (w + gap);
+      const y = top + row * (h + 20);
+      
+      const rect = svgEl('rect', { x, y, width: w, height: h, rx: 10, ry: 10, class: 'model-node' });
+      svg.appendChild(rect); 
+      label(svg, x + w/2, y + h/2 + 5, s);
+      
+      // Стрелки
       const nextInRow = inRowIndex < perRow - 1 && (i + 1) < list.length;
       if (nextInRow) {
-        const fromX = x + w; const fromY = y + h/2; const toX = x + w + gap; const toY = y + h/2;
+        const fromX = x + w; 
+        const fromY = y + h/2; 
+        const toX = x + w + gap - 8; 
+        const toY = y + h/2;
         svg.appendChild(svgEl('path', { d: `M ${fromX} ${fromY} L ${toX} ${toY}`, class: 'model-arrow' }));
       }
+      
       if (clickable) rect.classList.add('clickable');
     });
     return svg;

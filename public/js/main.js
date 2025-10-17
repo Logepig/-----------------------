@@ -2,15 +2,21 @@
   const root = document.documentElement;
   const themeToggle = document.querySelector('.theme-toggle');
   const authOpen = document.querySelector('.auth-open');
+  const authOpenMobile = document.querySelector('.auth-open-mobile');
   const modal = document.getElementById('auth-modal');
   const modalClose = modal?.querySelector('.modal-close');
-  const tabButtons = modal?.querySelectorAll('.tab-button');
+  const tabButtons = modal?.querySelectorAll('.auth-tab');
   const profileLink = document.querySelector('.profile-link');
+  const profileLinkMobile = document.querySelector('.profile-link-mobile');
   const logoutBtn = document.getElementById('logout-btn');
   const profileEdit = document.getElementById('profile-edit');
   const profileForm = document.getElementById('profile-form');
   const emailCurrent = document.getElementById('email-current');
   const phoneCurrent = document.getElementById('phone-current');
+  
+  // Hamburger menu
+  const hamburgerBtn = document.getElementById('hamburger-btn');
+  const navDropdown = document.getElementById('nav-dropdown');
 
   // Загрузка сохраненной темы из localStorage при загрузке страницы
   const savedTheme = localStorage.getItem('theme') || 'light';
@@ -24,9 +30,30 @@
     localStorage.setItem('theme', next);
   });
 
+  // Hamburger menu toggle
+  hamburgerBtn?.addEventListener('click', () => {
+    hamburgerBtn.classList.toggle('active');
+    navDropdown?.classList.toggle('active');
+  });
+
+  // Закрытие меню при клике вне его
+  document.addEventListener('click', (e) => {
+    if (navDropdown?.classList.contains('active') && 
+        !navDropdown.contains(e.target) && 
+        !hamburgerBtn?.contains(e.target)) {
+      hamburgerBtn?.classList.remove('active');
+      navDropdown?.classList.remove('active');
+    }
+  });
+
   // Открытие/закрытие модального окна авторизации
   authOpen?.addEventListener('click', () => {
     if (modal) modal.hidden = false;
+  });
+  authOpenMobile?.addEventListener('click', () => {
+    if (modal) modal.hidden = false;
+    hamburgerBtn?.classList.remove('active');
+    navDropdown?.classList.remove('active');
   });
   modalClose?.addEventListener('click', () => {
     if (modal) modal.hidden = true;
@@ -39,9 +66,9 @@
   tabButtons?.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tab = btn.getAttribute('data-tab');
-      modal.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+      modal.querySelectorAll('.auth-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      modal.querySelectorAll('.tab-content').forEach((el) => {
+      modal.querySelectorAll('.auth-form-container').forEach((el) => {
         el.hidden = el.getAttribute('data-tab') !== tab;
       });
     });
@@ -79,15 +106,67 @@
     }
   });
 
+  // Проверяем, смотрим ли мы чужой профиль
+  function getParam(name) { try { const u = new URL(window.location.href); return u.searchParams.get(name); } catch { return null; } }
+  const isViewingOtherProfile = document.body.getAttribute('data-page') === 'profile' && getParam('id');
+
   // При загрузке проверяем авторизацию
   fetch('/api/me').then(r => r.json()).then((data) => {
     if (data?.user) {
       profileLink?.classList.remove('hidden');
+      profileLinkMobile?.classList.remove('hidden');
       authOpen?.classList.add('hidden');
+      document.querySelector('.auth-open-mobile')?.classList.add('hidden');
       logoutBtn?.classList.remove('hidden');
-      profileEdit?.classList.remove('hidden');
+      if (!isViewingOtherProfile) {
+        profileEdit?.classList.remove('hidden');
+      }
       if (emailCurrent && typeof data.user.email === 'string') emailCurrent.textContent = data.user.email || 'email';
       if (phoneCurrent && typeof data.user.phone === 'string') phoneCurrent.textContent = data.user.phone || 'phone';
+      
+      // Обновляем профиль (только если это НЕ чужой профиль)
+      if (!isViewingOtherProfile) {
+        const profileUsername = document.getElementById('profile-username');
+        const profileDisplayName = document.getElementById('profile-display-name');
+        const profileInfo = document.getElementById('profile-info');
+        const avatarInitial = document.getElementById('avatar-initial');
+        const usernameLogin = document.getElementById('username-login');
+        const profileEmailInput = document.getElementById('profile-email');
+        const profilePhoneInput = document.getElementById('profile-phone');
+        const profileDisplayNameInput = document.getElementById('profile-display-name-input');
+        
+        if (profileUsername && data.user.username) {
+          profileUsername.textContent = `@${data.user.username}`;
+        }
+        if (profileDisplayName) {
+          profileDisplayName.textContent = data.user.display_name || data.user.username;
+        }
+        if (profileInfo) {
+          const email = data.user.email || 'не указан';
+          const phone = data.user.phone || 'не указан';
+          profileInfo.textContent = `Email: ${email} • Телефон: ${phone}`;
+        }
+        
+        // Отображаем инициал
+        if (avatarInitial && data.user.username) {
+          avatarInitial.textContent = data.user.username.charAt(0).toUpperCase();
+        }
+        
+        // Заполнение формы редактирования
+        if (usernameLogin && data.user.username) {
+          usernameLogin.textContent = data.user.username;
+        }
+        if (profileEmailInput) {
+          profileEmailInput.value = data.user.email || '';
+        }
+        if (profilePhoneInput) {
+          profilePhoneInput.value = data.user.phone || '';
+        }
+        if (profileDisplayNameInput) {
+          profileDisplayNameInput.value = data.user.display_name || '';
+        }
+      }
+      
       // Показываем кнопку создания только авторизованным пользователям
       const fab = document.getElementById('fab-add');
       if (fab) fab.classList.remove('hidden');
@@ -100,21 +179,46 @@
 
   // Просмотр публичного профиля по ID
   if (document.body.getAttribute('data-page') === 'profile') {
-    const profileInfo = document.querySelector('.profile-info');
     function getParam(name) { try { const u = new URL(window.location.href); return u.searchParams.get(name); } catch { return null; } }
     const viewId = getParam('id');
     if (viewId) {
       // Скрываем редактирование и выход для чужих профилей
       profileEdit?.classList.add('hidden');
       logoutBtn?.classList.add('hidden');
+      
+      // Загружаем данные пользователя
       fetch(`/api/users/${encodeURIComponent(viewId)}`).then(r=>r.json()).then((out) => {
         if (out?.ok && out.user) {
-          const { username, email } = out.user;
-          if (profileInfo) profileInfo.textContent = `${username} • ${email || ''}`.trim();
-        } else if (profileInfo) {
-          profileInfo.textContent = 'Пользователь не найден';
+          const user = out.user;
+          const profileDisplayName = document.getElementById('profile-display-name');
+          const profileUsername = document.getElementById('profile-username');
+          const profileInfo = document.getElementById('profile-info');
+          const avatarInitial = document.getElementById('avatar-initial');
+          
+          // Устанавливаем данные профиля
+          if (profileDisplayName) {
+            profileDisplayName.textContent = user.display_name || user.username;
+          }
+          if (profileUsername) {
+            profileUsername.textContent = `@${user.username}`;
+          }
+          if (profileInfo) {
+            const email = user.email || 'не указан';
+            profileInfo.textContent = `Email: ${email}`;
+          }
+          
+          // Устанавливаем инициал
+          if (avatarInitial) {
+            avatarInitial.textContent = user.username.charAt(0).toUpperCase();
+          }
+        } else {
+          const profileInfo = document.getElementById('profile-info');
+          if (profileInfo) profileInfo.textContent = 'Пользователь не найден';
         }
-      }).catch(() => { if (profileInfo) profileInfo.textContent = 'Ошибка загрузки профиля'; });
+      }).catch(() => {
+        const profileInfo = document.getElementById('profile-info');
+        if (profileInfo) profileInfo.textContent = 'Ошибка загрузки профиля';
+      });
     }
   }
 
@@ -126,23 +230,53 @@
 
   profileForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Получаем текущие данные пользователя
+    const currentData = await fetch('/api/me').then(r => r.json()).catch(() => null);
+    if (!currentData?.user) {
+      alert('Ошибка загрузки данных пользователя');
+      return;
+    }
+    
     const fd = new FormData(profileForm);
-    const payload = Object.fromEntries(fd.entries());
-    // Удаляем пустые поля, чтобы не перезаписывать пустыми строками
-    if (!payload.email) delete payload.email;
-    if (!payload.phone) delete payload.phone;
-    if (!payload.password) delete payload.password;
-    const res = await fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const newDisplayName = fd.get('displayName')?.trim();
+    const newEmail = fd.get('email')?.trim();
+    const newPhone = fd.get('phone')?.trim();
+    
+    // Проверяем, есть ли изменения
+    let hasChanges = false;
+    const payload = {};
+    
+    // Проверяем displayName (отправляем даже пустое значение, чтобы можно было очистить)
+    if (newDisplayName !== (currentData.user.display_name || '')) {
+      hasChanges = true;
+      payload.displayName = newDisplayName;
+    }
+    
+    // Проверяем email
+    if (newEmail && newEmail !== (currentData.user.email || '')) {
+      hasChanges = true;
+      payload.email = newEmail;
+    }
+    
+    // Проверяем phone
+    if (newPhone && newPhone !== (currentData.user.phone || '')) {
+      hasChanges = true;
+      payload.phone = newPhone;
+    }
+    
+    // Если нет изменений, не отправляем запрос
+    if (!hasChanges) {
+      alert('Нет изменений для сохранения');
+      return;
+    }
+    
+    const res = await fetch('/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const out = await res.json();
     if (out.ok) {
       alert('Данные обновлены');
-      // Перезагружаем текущие значения
-      const me = await fetch('/api/me').then(r=>r.json()).catch(()=>null);
-      if (me?.user) {
-        if (emailCurrent) emailCurrent.textContent = me.user.email || 'email';
-        if (phoneCurrent) phoneCurrent.textContent = me.user.phone || 'phone';
-      }
-      profileForm.reset();
+      // Перезагружаем страницу для обновления всех данных
+      window.location.reload();
     } else {
       alert(out.error || 'Ошибка обновления');
     }
@@ -186,6 +320,24 @@
   const addProjectModal = document.getElementById('add-project-modal');
   const addProjectClose = addProjectModal?.querySelector('.modal-close');
   const addProjectForm = document.getElementById('add-project-form');
+  const avatarSelectorModal = document.getElementById('avatar-selector-modal');
+  const projectAvatarInput = document.getElementById('project-avatar-input');
+
+  // Обработка выбора аватара
+  avatarSelectorModal?.addEventListener('click', (e) => {
+    const option = e.target.closest('.avatar-option-modal');
+    if (option) {
+      const avatarUrl = option.getAttribute('data-avatar');
+      if (projectAvatarInput) projectAvatarInput.value = avatarUrl;
+      
+      // Убираем выделение со всех и добавляем на выбранный
+      avatarSelectorModal.querySelectorAll('.avatar-option-modal').forEach(opt => {
+        opt.classList.remove('selected');
+      });
+      option.classList.add('selected');
+    }
+  });
+
   fabAdd?.addEventListener('click', () => { if (addProjectModal) addProjectModal.hidden = false; });
   addProjectClose?.addEventListener('click', () => { if (addProjectModal) addProjectModal.hidden = true; });
   addProjectModal?.addEventListener('click', (e) => { if (e.target === addProjectModal) addProjectModal.hidden = true; });
@@ -206,6 +358,14 @@
       // Просто закрываем модалку и сбрасываем форму.
       addProjectModal.hidden = true;
       addProjectForm.reset();
+      
+      // Сбрасываем выбор аватара
+      if (avatarSelectorModal) {
+        avatarSelectorModal.querySelectorAll('.avatar-option-modal').forEach((opt, idx) => {
+          opt.classList.toggle('selected', idx === 0);
+        });
+      }
+      if (projectAvatarInput) projectAvatarInput.value = '/img/icon_avatar_1.svg';
     } else {
       alert(out.error || 'Ошибка создания проекта');
     }
