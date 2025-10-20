@@ -1,6 +1,7 @@
 @import url('/css/pages/index.css');
 @import url('/css/pages/myprojects.css');
 @import url('/css/pages/profile.css');
+@import url('/css/pages/administrator.css');
 
 :root {
   --bg: #ffffff;

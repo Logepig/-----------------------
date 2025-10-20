@@ -4,7 +4,9 @@
   "description": "Учебный проект: Node.js сервер и статический сайт",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "create-admin": "node create_admin.js",
+    "migrate-remove-user-avatar": "node migrate_remove_user_avatar.js"
   },
   "keywords": [],
   "author": "",

@@ -14,7 +14,8 @@ db.serialize(() => {
     phone TEXT,
     email TEXT,
     created_at TEXT NOT NULL,
-    last_seen TEXT
+    last_seen TEXT,
+    display_name TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS projects (
@@ -61,21 +62,17 @@ db.serialize(() => {
     }
   });
 
-  // Безопасная миграция для users (last_seen, display_name, avatar_url)
+  // Безопасная миграция для users (last_seen, display_name)
   db.all("PRAGMA table_info(users)", (err, rows) => {
     if (!err && rows) {
       const hasLastSeen = rows.some(row => row.name === 'last_seen');
       const hasDisplayName = rows.some(row => row.name === 'display_name');
-      const hasAvatarUrl = rows.some(row => row.name === 'avatar_url');
       
       if (!hasLastSeen) {
         db.run('ALTER TABLE users ADD COLUMN last_seen TEXT');
       }
       if (!hasDisplayName) {
         db.run('ALTER TABLE users ADD COLUMN display_name TEXT');
-      }
-      if (!hasAvatarUrl) {
-        db.run('ALTER TABLE users ADD COLUMN avatar_url TEXT');
       }
     }
   });

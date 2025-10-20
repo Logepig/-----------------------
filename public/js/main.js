@@ -84,6 +84,11 @@
     const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (data.ok) {
+      // Если это admin, перенаправляем на админ-панель
+      if (data.redirect) {
+        window.location.href = data.redirect;
+        return;
+      }
       profileLink?.classList.remove('hidden');
       authOpen?.classList.add('hidden');
       modal.hidden = true;
@@ -98,6 +103,11 @@
     const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (data.ok) {
+      // Если это admin, перенаправляем на админ-панель (хотя регистрация admin маловероятна)
+      if (data.redirect) {
+        window.location.href = data.redirect;
+        return;
+      }
       profileLink?.classList.remove('hidden');
       authOpen?.classList.add('hidden');
       modal.hidden = true;
@@ -113,6 +123,13 @@
   // При загрузке проверяем авторизацию
   fetch('/api/me').then(r => r.json()).then((data) => {
     if (data?.user) {
+      // Если это admin и мы НЕ на странице администратора, перенаправляем
+      const currentPage = window.location.pathname;
+      if (data.isAdmin && !currentPage.includes('administrator.html')) {
+        window.location.href = '/administrator.html';
+        return;
+      }
+      
       profileLink?.classList.remove('hidden');
       profileLinkMobile?.classList.remove('hidden');
       authOpen?.classList.add('hidden');

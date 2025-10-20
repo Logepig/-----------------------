@@ -35,6 +35,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Middleware для проверки прав администратора
+const isAdmin = (req, res, next) => {
+  if (!req.session.user || req.session.user.username !== 'admin') {
+    return res.status(403).json({ ok: false, error: 'Admin access required' });
+  }
+  next();
+};
+
 // Базовые роуты для страниц (опционально, так как статические файлы уже отдаются)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -48,13 +56,27 @@ app.get('/Profile', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'Profile.html'));
 });
 
+app.get('/administrator', (req, res) => {
+  // Проверяем права администратора
+  if (!req.session.user || req.session.user.username !== 'admin') {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'administrator.html'));
+});
+
 // API: Авторизация
 app.get('/api/me', (req, res) => {
   if (!req.session.user) return res.json({ ok: true, user: null });
   db.get('SELECT id, username, display_name, email, phone FROM users WHERE id = ?', [req.session.user.id], (err, row) => {
     if (err) return res.status(500).json({ ok: false, error: 'DB error' });
     if (!row) return res.json({ ok: true, user: null });
-    res.json({ ok: true, user: row });
+    
+    // Добавляем информацию о необходимости перенаправления для admin
+    if (row.username === 'admin') {
+      res.json({ ok: true, user: row, isAdmin: true });
+    } else {
+      res.json({ ok: true, user: row });
+    }
   });
 });
 
@@ -119,7 +141,13 @@ app.post('/api/login', (req, res) => {
     const match = await bcrypt.compare(password, row.password_hash);
     if (!match) return res.status(401).json({ ok: false, error: 'Invalid credentials' });
     req.session.user = { id: row.id, username: row.username };
-    res.json({ ok: true, user: { id: row.id, username: row.username } });
+    
+    // Если это admin, перенаправляем на админ-панель
+    if (row.username === 'admin') {
+      res.json({ ok: true, user: { id: row.id, username: row.username }, redirect: '/administrator.html' });
+    } else {
+      res.json({ ok: true, user: { id: row.id, username: row.username } });
+    }
   });
 });
 
@@ -1377,6 +1405,111 @@ app.put('/api/profile', async (req, res) => {
   } else {
     performUpdate();
   }
+});
+
+// ===== ADMIN API =====
+
+// Получение данных таблицы
+app.get('/api/admin/tables/:tableName', isAdmin, (req, res) => {
+  const tableName = req.params.tableName;
+  
+  // Список разрешенных таблиц (защита от SQL injection)
+  const allowedTables = [
+    'users',
+    'projects',
+    'project_memberships',
+    'project_join_requests',
+    'project_promotion_requests',
+    'project_stages',
+    'project_file_groups',
+    'project_files',
+    'project_tasks',
+    'project_task_files'
+  ];
+  
+  if (!allowedTables.includes(tableName)) {
+    return res.status(400).json({ ok: false, error: 'Invalid table name' });
+  }
+  
+  // Получаем все данные из таблицы
+  db.all(`SELECT * FROM ${tableName}`, [], (err, rows) => {
+    if (err) {
+      console.error('Error fetching table data:', err);
+      return res.status(500).json({ ok: false, error: 'DB error' });
+    }
+    
+    res.json({ ok: true, rows: rows || [] });
+  });
+});
+
+// Удаление записи из таблицы
+app.delete('/api/admin/tables/delete', isAdmin, (req, res) => {
+  const { table, row } = req.body || {};
+  
+  if (!table || !row) {
+    return res.status(400).json({ ok: false, error: 'Missing parameters' });
+  }
+  
+  // Список разрешенных таблиц
+  const allowedTables = [
+    'users',
+    'projects',
+    'project_memberships',
+    'project_join_requests',
+    'project_promotion_requests',
+    'project_stages',
+    'project_file_groups',
+    'project_files',
+    'project_tasks',
+    'project_task_files'
+  ];
+  
+  if (!allowedTables.includes(table)) {
+    return res.status(400).json({ ok: false, error: 'Invalid table name' });
+  }
+  
+  // Определяем первичный ключ для каждой таблицы
+  const primaryKeys = {
+    'users': ['id'],
+    'projects': ['id'],
+    'project_memberships': ['user_id', 'project_id'],
+    'project_join_requests': ['id'],
+    'project_promotion_requests': ['id'],
+    'project_stages': ['id'],
+    'project_file_groups': ['id'],
+    'project_files': ['id'],
+    'project_tasks': ['id'],
+    'project_task_files': ['id']
+  };
+  
+  const keys = primaryKeys[table];
+  if (!keys) {
+    return res.status(400).json({ ok: false, error: 'Unknown primary key' });
+  }
+  
+  // Строим WHERE clause
+  const whereConditions = keys.map(key => `${key} = ?`).join(' AND ');
+  const whereValues = keys.map(key => row[key]);
+  
+  // Проверяем, что все значения ключей присутствуют
+  if (whereValues.some(val => val === undefined || val === null)) {
+    return res.status(400).json({ ok: false, error: 'Missing primary key values' });
+  }
+  
+  const sql = `DELETE FROM ${table} WHERE ${whereConditions}`;
+  
+  db.run(sql, whereValues, function(err) {
+    if (err) {
+      console.error('Error deleting row:', err);
+      return res.status(500).json({ ok: false, error: 'DB error' });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({ ok: false, error: 'Row not found' });
+    }
+    
+    res.json({ ok: true, deleted: this.changes });
+  });
 });
 
 app.listen(PORT, () => {

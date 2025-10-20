@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Панель администратора</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/pages/administrator.css">
+</head>
+<body data-page="administrator">
+  <!-- Navbar -->
+  <div class="navbar">
+    <button class="hamburger-btn" id="hamburger-btn">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    
+    <div class="nav-left">
+      <span style="font-weight: 600; color: var(--primary);">Панель администратора</span>
+    </div>
+    
+    <div class="nav-right">
+      <button class="theme-toggle" aria-label="Переключить тему"></button>
+      <button id="logout-btn" style="background: var(--primary); color: white; border-color: var(--primary);">Выйти</button>
+    </div>
+
+    <!-- Mobile dropdown -->
+    <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dropdown-content">
+        <button id="logout-btn-mobile" style="background: var(--primary); color: white; border-color: var(--primary);">Выйти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="admin-container">
+    <div class="admin-header">
+      <h1>Администрирование базы данных</h1>
+      <p class="admin-subtitle">Управление всеми таблицами системы</p>
+    </div>
+
+    <div class="admin-controls">
+      <div class="form-group">
+        <label for="table-selector">Выберите таблицу:</label>
+        <select id="table-selector" class="table-selector">
+          <option value="">-- Выберите таблицу --</option>
+          <option value="users">users (Пользователи)</option>
+          <option value="projects">projects (Проекты)</option>
+          <option value="project_memberships">project_memberships (Членство в проектах)</option>
+          <option value="project_join_requests">project_join_requests (Заявки на вступление)</option>
+          <option value="project_promotion_requests">project_promotion_requests (Заявки на повышение)</option>
+          <option value="project_stages">project_stages (Этапы проектов)</option>
+          <option value="project_file_groups">project_file_groups (Группы файлов)</option>
+          <option value="project_files">project_files (Файлы)</option>
+          <option value="project_tasks">project_tasks (Задачи)</option>
+          <option value="project_task_files">project_task_files (Файлы задач)</option>
+        </select>
+      </div>
+      
+      <div class="table-info">
+        <span id="record-count">Записей: 0</span>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <div id="table-container" class="table-container">
+        <div class="empty-state">
+          <p>Выберите таблицу для просмотра данных</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/administrator.js"></script>
+</body>
+</html>
+
