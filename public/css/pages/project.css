@@ -1282,3 +1282,96 @@
   }
 }
 
+/* === Стили для статусов задач === */
+.task-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.task-status-in-progress {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--primary);
+}
+
+.task-status-completed {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.task-stage-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+  margin-left: 8px;
+}
+
+/* Эффект blur для выполненных задач */
+.file-group.task-completed {
+  opacity: 0.7;
+}
+
+.file-group.task-completed .file-group-content {
+  filter: blur(1px);
+  transition: filter 0.3s;
+}
+
+.file-group.task-completed:hover .file-group-content {
+  filter: blur(0);
+}
+
+.file-group.task-completed .file-group-header {
+  opacity: 1;
+}
+
+.btn-status {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-status:hover {
+  border-color: var(--primary);
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.btn-status.status-complete {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.btn-status.status-complete:hover {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+/* Анимация мигания border для выделенной задачи */
+@keyframes highlightBorder {
+  0%, 100% {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+  }
+  50% {
+    border-color: var(--primary);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.5);
+  }
+}
+
+.file-group.highlight-task {
+  animation: highlightBorder 1.5s ease-in-out 3;
+  border: 2px solid var(--primary);
+  scroll-margin-top: 80px;
+}
+

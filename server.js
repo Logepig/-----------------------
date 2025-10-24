@@ -1035,11 +1035,15 @@ app.get('/api/projects/:id/tasks', (req, res) => {
       t.id, 
       t.title, 
       t.description,
+      t.status,
+      t.stage_id,
       t.created_at, 
       t.created_by,
-      u.username as created_by_username
+      u.username as created_by_username,
+      s.name as stage_name
     FROM project_tasks t
     LEFT JOIN users u ON u.id = t.created_by
+    LEFT JOIN project_stages s ON s.id = t.stage_id
     WHERE t.project_id = ?
     ORDER BY t.created_at DESC
   `;
@@ -1080,9 +1084,9 @@ app.post('/api/projects/:id/tasks', upload.array('files', 10), (req, res) => {
 
   const projectId = req.params.id;
   const userId = req.session.user.id;
-  const { title, description } = req.body;
+  const { title, description, stageId } = req.body;
 
-  console.log('Creating task:', { projectId, userId, title, description, filesCount: req.files?.length || 0 });
+  console.log('Creating task:', { projectId, userId, title, description, stageId, filesCount: req.files?.length || 0 });
 
   if (!title || !title.trim()) {
     // Удаляем загруженные файлы если есть
@@ -1113,11 +1117,12 @@ app.post('/api/projects/:id/tasks', upload.array('files', 10), (req, res) => {
 
       const taskId = Date.now().toString(36) + Math.random().toString(36).substring(2);
       const createdAt = new Date().toISOString();
+      const status = 'in_progress'; // По умолчанию статус "выполняется"
 
       // Создаем задачу
       db.run(
-        'INSERT INTO project_tasks (id, project_id, title, description, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-        [taskId, projectId, title.trim(), description?.trim() || null, createdAt, userId],
+        'INSERT INTO project_tasks (id, project_id, title, description, status, stage_id, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [taskId, projectId, title.trim(), description?.trim() || null, status, stageId || null, createdAt, userId],
         function(taskErr) {
           if (taskErr) {
             // Удаляем загруженные файлы
@@ -1174,7 +1179,7 @@ app.post('/api/projects/:id/tasks/:taskId/files', upload.array('files', 10), (re
     return res.status(400).json({ ok: false, error: 'No files provided' });
   }
 
-  // Проверяем права: управляющий или заместитель
+  // Проверяем членство в проекте (все участники могут добавлять файлы к задачам)
   db.get(
     'SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?',
     [projectId, userId],
@@ -1187,12 +1192,12 @@ app.post('/api/projects/:id/tasks/:taskId/files', upload.array('files', 10), (re
         return res.status(500).json({ ok: false, error: 'DB error' });
       }
       
-      if (!membership || (membership.role !== 'manager' && membership.role !== 'deputy')) {
+      if (!membership) {
         // Удаляем загруженные файлы
         req.files.forEach(file => {
           if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
         });
-        return res.status(403).json({ ok: false, error: 'Only manager/deputy can add files to tasks' });
+        return res.status(403).json({ ok: false, error: 'Not a member of this project' });
       }
 
       const createdAt = new Date().toISOString();
@@ -1335,6 +1340,80 @@ app.delete('/api/projects/:id/tasks/:taskId', (req, res) => {
           }
 
           res.json({ ok: true });
+        });
+      });
+    }
+  );
+});
+
+// Изменение статуса задачи
+app.put('/api/projects/:id/tasks/:taskId/status', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  
+  const taskId = req.params.taskId;
+  const userId = req.session.user.id;
+  const projectId = req.params.id;
+  const { status } = req.body;
+
+  // Проверка валидности статуса
+  if (!status || !['in_progress', 'completed'].includes(status)) {
+    return res.status(400).json({ ok: false, error: 'Invalid status' });
+  }
+
+  // Проверяем права: управляющий или заместитель
+  db.get(
+    'SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?',
+    [projectId, userId],
+    (memErr, membership) => {
+      if (memErr) return res.status(500).json({ ok: false, error: 'DB error' });
+      
+      if (!membership || (membership.role !== 'manager' && membership.role !== 'deputy')) {
+        return res.status(403).json({ ok: false, error: 'Only manager/deputy can change task status' });
+      }
+
+      // Получаем текущую задачу
+      db.get('SELECT stage_id FROM project_tasks WHERE id = ? AND project_id = ?', [taskId, projectId], (taskErr, task) => {
+        if (taskErr) return res.status(500).json({ ok: false, error: 'DB error' });
+        if (!task) return res.status(404).json({ ok: false, error: 'Task not found' });
+
+        // Обновляем статус задачи
+        db.run('UPDATE project_tasks SET status = ? WHERE id = ?', [status, taskId], function(updateErr) {
+          if (updateErr) return res.status(500).json({ ok: false, error: 'DB error' });
+
+          // Если задача выполнена и привязана к этапу, переключаем проект на следующий этап
+          if (status === 'completed' && task.stage_id) {
+            // Получаем следующий этап
+            db.get(
+              `SELECT id FROM project_stages 
+               WHERE project_id = ? AND position > (
+                 SELECT position FROM project_stages WHERE id = ?
+               )
+               ORDER BY position ASC LIMIT 1`,
+              [projectId, task.stage_id],
+              (stageErr, nextStage) => {
+                if (stageErr) {
+                  console.error('Error getting next stage:', stageErr);
+                  return res.json({ ok: true, stageChanged: false });
+                }
+
+                if (nextStage) {
+                  // Обновляем выбранный этап проекта
+                  db.run('UPDATE projects SET selected_stage_id = ? WHERE id = ?', [nextStage.id, projectId], (projErr) => {
+                    if (projErr) {
+                      console.error('Error updating project stage:', projErr);
+                      return res.json({ ok: true, stageChanged: false });
+                    }
+                    res.json({ ok: true, stageChanged: true, newStageId: nextStage.id });
+                  });
+                } else {
+                  // Нет следующего этапа
+                  res.json({ ok: true, stageChanged: false, message: 'No next stage available' });
+                }
+              }
+            );
+          } else {
+            res.json({ ok: true, stageChanged: false });
+          }
         });
       });
     }
@@ -1555,15 +1634,73 @@ app.post('/api/projects/:id/select-stage', (req, res) => {
   if (!req.session.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
   const projectId = req.params.id; const { stageId } = req.body || {};
   if (!stageId) return res.status(400).json({ ok: false, error: 'stageId required' });
+  
   db.get('SELECT role FROM project_memberships WHERE project_id = ? AND user_id = ?', [projectId, req.session.user.id], (err, row) => {
     if (err) return res.status(500).json({ ok: false, error: 'DB error' });
     if (!row || (row.role !== 'manager' && row.role !== 'deputy')) return res.status(403).json({ ok: false, error: 'Forbidden' });
-    db.get('SELECT id FROM project_stages WHERE id = ? AND project_id = ?', [stageId, projectId], (e2, srow) => {
-      if (e2) return res.status(500).json({ ok: false, error: 'DB error' });
-      if (!srow) return res.status(404).json({ ok: false, error: 'Stage not found' });
-      db.run('UPDATE projects SET selected_stage_id = ? WHERE id = ?', [stageId, projectId], function(updErr){
-        if (updErr) return res.status(500).json({ ok: false, error: 'DB error' });
-        res.json({ ok: true });
+    
+    // Получаем текущий этап и новый этап с их позициями
+    db.get('SELECT selected_stage_id FROM projects WHERE id = ?', [projectId], (projErr, project) => {
+      if (projErr) return res.status(500).json({ ok: false, error: 'DB error' });
+      
+      const oldStageId = project?.selected_stage_id;
+      
+      // Получаем позиции старого и нового этапов
+      const stageQuery = `
+        SELECT id, position FROM project_stages 
+        WHERE project_id = ? AND (id = ? OR id = ?)
+      `;
+      
+      db.all(stageQuery, [projectId, oldStageId, stageId], (stagesErr, stages) => {
+        if (stagesErr) return res.status(500).json({ ok: false, error: 'DB error' });
+        
+        const oldStage = stages.find(s => s.id === oldStageId);
+        const newStage = stages.find(s => s.id === stageId);
+        
+        if (!newStage) return res.status(404).json({ ok: false, error: 'Stage not found' });
+        
+        const oldPosition = oldStage ? oldStage.position : -1;
+        const newPosition = newStage.position;
+        
+        // Обновляем выбранный этап проекта
+        db.run('UPDATE projects SET selected_stage_id = ? WHERE id = ?', [stageId, projectId], function(updErr){
+          if (updErr) return res.status(500).json({ ok: false, error: 'DB error' });
+          
+          // Автоматическое изменение статусов задач
+          if (oldPosition !== -1) {
+            if (newPosition < oldPosition) {
+              // Откат назад: возвращаем задачи привязанного этапа в работу
+              db.run(
+                'UPDATE project_tasks SET status = "in_progress" WHERE project_id = ? AND stage_id = ?',
+                [projectId, stageId],
+                (taskErr) => {
+                  if (taskErr) console.error('Error updating task statuses on stage rollback:', taskErr);
+                  res.json({ ok: true, stageDirection: 'backward' });
+                }
+              );
+            } else if (newPosition > oldPosition) {
+              // Переход вперед: завершаем задачи всех пройденных этапов
+              db.run(
+                `UPDATE project_tasks SET status = "completed" 
+                 WHERE project_id = ? 
+                 AND stage_id IN (
+                   SELECT id FROM project_stages 
+                   WHERE project_id = ? AND position < ?
+                 )
+                 AND status = "in_progress"`,
+                [projectId, projectId, newPosition],
+                (taskErr) => {
+                  if (taskErr) console.error('Error updating task statuses on stage advance:', taskErr);
+                  res.json({ ok: true, stageDirection: 'forward' });
+                }
+              );
+            } else {
+              res.json({ ok: true, stageDirection: 'same' });
+            }
+          } else {
+            res.json({ ok: true, stageDirection: 'initial' });
+          }
+        });
       });
     });
   });

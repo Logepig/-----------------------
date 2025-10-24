@@ -161,11 +161,31 @@ db.serialize(() => {
     project_id TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
+    status TEXT DEFAULT 'in_progress',
+    stage_id TEXT,
     created_at TEXT NOT NULL,
     created_by TEXT NOT NULL,
     FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
-    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(stage_id) REFERENCES project_stages(id) ON DELETE SET NULL
   )`);
+
+  // Безопасная миграция для project_tasks (status, stage_id)
+  db.all("PRAGMA table_info(project_tasks)", (err, rows) => {
+    if (!err && rows) {
+      const hasStatus = rows.some(row => row.name === 'status');
+      const hasStageId = rows.some(row => row.name === 'stage_id');
+      
+      if (!hasStatus) {
+        db.run('ALTER TABLE project_tasks ADD COLUMN status TEXT DEFAULT "in_progress"', () => {
+          db.run('UPDATE project_tasks SET status = "in_progress" WHERE status IS NULL');
+        });
+      }
+      if (!hasStageId) {
+        db.run('ALTER TABLE project_tasks ADD COLUMN stage_id TEXT');
+      }
+    }
+  });
 
   // Файлы задач
   db.run(`CREATE TABLE IF NOT EXISTS project_task_files (

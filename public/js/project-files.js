@@ -7,6 +7,8 @@
   let currentProjectId = null;
   let currentSortOrder = 'desc';
   let fileGroups = [];
+  let currentUserId = null;
+  let currentUserRole = null;
 
   // Модальное окно
   const addFilesBtn = document.getElementById('add-files-btn');
@@ -109,6 +111,35 @@
     renderFileGroups();
   });
 
+  // Получение информации о текущем пользователе
+  async function loadCurrentUser() {
+    try {
+      const meRes = await fetch('/api/me');
+      const meData = await meRes.json();
+      if (meData.ok && meData.user) {
+        currentUserId = meData.user.id;
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки пользователя:', error);
+    }
+  }
+
+  // Получение роли пользователя в проекте
+  async function loadUserRole() {
+    const projectId = getParam('id');
+    if (!projectId) return;
+
+    try {
+      const roleRes = await fetch(`/api/projects/${encodeURIComponent(projectId)}/me`);
+      const roleData = await roleRes.json();
+      if (roleData.ok && roleData.membership) {
+        currentUserRole = roleData.membership.role;
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки роли:', error);
+    }
+  }
+
   // Загрузка групп файлов (включая файлы из задач)
   async function loadFileGroups() {
     const projectId = getParam('id');
@@ -151,13 +182,18 @@
       const filesCount = group.files ? group.files.length : 0;
       const isTask = group.source_type === 'task';
       
+      // Проверяем права на удаление: manager, deputy или создатель группы
+      const canDeleteGroup = currentUserRole === 'manager' || 
+                             currentUserRole === 'deputy' || 
+                             group.created_by === currentUserId;
+      
       return `
         <div class="file-group" data-group-id="${group.id}" data-source-type="${group.source_type || 'file_group'}">
           <div class="file-group-header">
             <div class="file-group-info">
               <div class="file-group-topic">
                 ${escapeHtml(group.topic)}
-                ${isTask ? `<span class="task-badge">Файлы из задачи <a href="/ProjectTasks.html?id=${encodeURIComponent(currentProjectId)}" class="task-link">[Перейти к задаче]</a></span>` : ''}
+                ${isTask ? `<span class="task-badge">Файлы из задачи <a href="/ProjectTasks.html?id=${encodeURIComponent(currentProjectId)}&taskId=${encodeURIComponent(group.id)}" class="task-link">[Перейти к задаче]</a></span>` : ''}
               </div>
               <div class="file-group-meta">${date} • ${filesCount} ${pluralizeFiles(filesCount)}</div>
             </div>
@@ -171,7 +207,7 @@
                   <div class="file-item-size">${formatFileSize(file.file_size)}</div>
                   <div class="file-item-actions">
                     <button class="file-download-btn" data-file-id="${file.id}" data-source-type="${group.source_type || 'file_group'}" data-task-id="${group.task_id || ''}">Скачать</button>
-                    <button class="file-delete-btn" data-file-id="${file.id}" data-source-type="${group.source_type || 'file_group'}" data-task-id="${group.task_id || ''}">Удалить</button>
+                    ${canDeleteGroup ? `<button class="file-delete-btn" data-file-id="${file.id}" data-source-type="${group.source_type || 'file_group'}" data-task-id="${group.task_id || ''}">Удалить</button>` : ''}
                   </div>
                 </div>
               `).join('') : '<p style="color: var(--muted); padding: 10px;">Нет файлов</p>'}
@@ -285,10 +321,16 @@
   }
 
   // Инициализация
-  document.addEventListener('DOMContentLoaded', loadFileGroups);
+  async function init() {
+    await loadCurrentUser();
+    await loadUserRole();
+    await loadFileGroups();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
   window.addEventListener('pageshow', (e) => {
     try {
-      if (e.persisted) loadFileGroups();
+      if (e.persisted) init();
     } catch {}
   });
 })();

@@ -111,7 +111,22 @@
       }
 
       async function saveSelected(stageId) {
-        await fetch(`/api/projects/${encodeURIComponent(id)}/select-stage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stageId }) });
+        const res = await fetch(`/api/projects/${encodeURIComponent(id)}/select-stage`, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ stageId }) 
+        });
+        
+        const data = await res.json();
+        
+        // Показываем уведомление в зависимости от направления смены этапа
+        if (data?.ok && data.stageDirection) {
+          if (data.stageDirection === 'backward') {
+            alert('Этап изменен! Задачи этого этапа возвращены в работу.');
+          } else if (data.stageDirection === 'forward') {
+            alert('Этап изменен! Задачи предыдущих этапов отмечены как выполненные.');
+          }
+        }
       }
 
       function highlightSelected(svg, stages, selectedId) {
